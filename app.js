@@ -308,6 +308,7 @@ if (shapeGridContainer && shapeGridCanvas && shapeGridContext) {
   const cellSize = 40;
   const trail = 0.6;
   const hoverRadius = cellSize * 1.5;
+  const hoverColor = "#5c5564";
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const litCells = new Map();
   const cascades = [];
@@ -397,12 +398,12 @@ if (shapeGridContainer && shapeGridCanvas && shapeGridContext) {
         context.beginPath();
         context.rect(left, top, cellSize, cellSize);
         context.globalAlpha = Math.min(1, value) * 0.15;
-        context.fillStyle = "#ffffff";
+        context.fillStyle = hoverColor;
         context.fill();
         context.globalAlpha = Math.min(1, value) * 0.85;
-        context.strokeStyle = "#ffffff";
+        context.strokeStyle = hoverColor;
         context.lineWidth = 1 + value * 0.6;
-        context.shadowColor = "#ffffff";
+        context.shadowColor = hoverColor;
         context.shadowBlur = 0.35 * 16 * value;
         context.stroke();
         context.shadowBlur = 0;
