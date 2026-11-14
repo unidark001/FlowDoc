@@ -33,7 +33,7 @@ if (menuToggle && siteMenu) {
   });
 }
 
-const splitTexts = document.querySelectorAll(".split-text");
+const splitTexts = document.querySelectorAll(".split-text:not(.shiny-text)");
 
 for (const element of splitTexts) {
   const text = element.textContent?.trim().replace(/\s+/g, " ");
@@ -228,7 +228,7 @@ if (collaborationCard) {
     {
       element: collaborationCard.querySelector(".cursor-leo"),
       phase: 0,
-      period: 10,
+      period: 12,
       radiusX: 12,
       radiusY: 4,
       wobbleX: 2,
@@ -237,7 +237,7 @@ if (collaborationCard) {
     {
       element: collaborationCard.querySelector(".cursor-maya"),
       phase: 2.4,
-      period: 12,
+      period: 14,
       radiusX: 10,
       radiusY: 5,
       wobbleX: 2.4,
@@ -275,6 +275,7 @@ if (collaborationCard) {
   };
 
   const setCursorMotion = (isHovered) => {
+    collaborationCard.classList.add("cursors-active");
     targetSpeed = isHovered && !prefersReducedMotion.matches ? 1 : 0;
 
     if (!animationFrame && (targetSpeed > 0 || motionSpeed > 0.003)) {
