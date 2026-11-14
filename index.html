@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#100f14">
+    <meta
+      name="description"
+      content="FlowDoc keeps your documents clear, organized, and moving forward."
+    >
+    <title>FlowDoc — Don't Get Fooled</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="nav-bar" aria-label="Main navigation">
+        <div class="nav-menu-wrap">
+          <button
+            class="menu-toggle"
+            type="button"
+            aria-expanded="false"
+            aria-controls="site-menu"
+          >
+            <span class="menu-icon" aria-hidden="true"><i></i><i></i></span>
+            <span>Menu</span>
+          </button>
+          <div class="menu-popover" id="site-menu" hidden>
+            <p class="menu-eyebrow">Explore FlowDoc</p>
+            <a href="#about">About <span>01</span></a>
+            <a href="#features">Features <span>02</span></a>
+            <a href="pricing.html">Plans <span>03</span></a>
+          </div>
+        </div>
+
+        <a class="brand" href="index.html" aria-label="FlowDoc home">
+          <svg class="brand-mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <path d="M7 6.5h12.5a5 5 0 0 1 5 5v14H12a5 5 0 0 1-5-5v-14Z" stroke="currentColor" stroke-width="1.7"/>
+            <path d="M12 11h7.5M12 15h8M12 19h5.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+          </svg>
+          <span>FlowDoc</span>
+        </a>
+
+        <a class="specular-button nav-cta" href="pricing.html">
+          <span>Get started</span>
+        </a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero reveal" id="about" aria-labelledby="hero-title">
+        <p class="eyebrow"><span class="status-dot"></span> Documents, without the doubt</p>
+        <h1 class="split-text shiny-text" id="hero-title">Don't Get Fooled</h1>
+        <p class="hero-description split-text">
+          Keep every document clear, organized, and moving forward.
+          Less second-guessing. More getting things done.
+        </p>
+        <div class="hero-orb" aria-hidden="true"></div>
+      </section>
+
+      <section class="features-section reveal" id="features" aria-label="FlowDoc benefits">
+        <div class="feature-grid">
+          <article class="feature-card">
+            <span class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M13.5 2.8 5.7 13h5.6l-.8 8.2L18.3 11h-5.7l.9-8.2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+            </span>
+            <h3>Quick to find</h3>
+            <p>Bring your important documents together and find what you need in a few clicks.</p>
+          </article>
+          <article class="feature-card">
+            <span class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none"><path d="m12 3 8 4.5-8 4.5-8-4.5L12 3Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="m4 12 8 4.5 8-4.5M4 16.5l8 4.5 8-4.5" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+            </span>
+            <h3>Easy to organize</h3>
+            <p>Keep files, notes, and the details around them connected in one simple workspace.</p>
+          </article>
+          <article class="feature-card">
+            <span class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M12 3 20 6v5.3c0 4.8-3.4 8.1-8 9.7-4.6-1.6-8-4.9-8-9.7V6l8-3Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <h3>Built for clarity</h3>
+            <p>Stay on top of what matters, with a calmer and more confident way to work.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="bento-section reveal" aria-label="FlowDoc workspace overview">
+        <div class="magic-bento">
+          <article class="magic-card bento-analytics">
+            <div class="metric-heading"><strong>12.4k</strong><span>+18%</span></div>
+            <svg class="analytics-chart" viewBox="0 0 180 72" preserveAspectRatio="none" aria-hidden="true">
+              <path class="chart-area" d="M0 61 19 52 35 56 52 42 70 48 87 35 104 42 123 26 139 30 157 16 168 7 180 0V72H0Z"/>
+              <path class="chart-line" d="m0 61 19-9 16 4 17-14 18 6 17-13 17 7 18-16 16 4 18-14L180 0"/>
+            </svg>
+            <h3>Analytics</h3>
+            <p>Track what matters</p>
+          </article>
+
+          <article class="magic-card bento-dashboard">
+            <div class="metric-heading"><strong>$48.2k</strong><span>Weekly</span></div>
+            <div class="dashboard-chart" aria-hidden="true">
+              <span></span><span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <h3>Dashboard</h3>
+            <p>Your work at a glance</p>
+          </article>
+
+          <article class="magic-card bento-collaboration">
+            <div class="document-preview" aria-hidden="true">
+              <div class="document-title">Launch plan</div>
+              <span class="document-line line-long"></span>
+              <span class="document-line line-medium"></span>
+              <span class="document-line line-near-long"></span>
+              <span class="document-line line-short"></span>
+              <span class="document-line line-medium"></span>
+              <span class="document-line line-long"></span>
+              <span class="collab-cursor cursor-leo">Leo</span>
+              <span class="collab-cursor cursor-maya">Maya</span>
+            </div>
+            <h3>Collaboration</h3>
+            <p>Work together seamlessly</p>
+          </article>
+
+          <article class="magic-card bento-automation">
+            <div class="commit-preview" aria-hidden="true">
+              <div class="commit-heading"><span class="branch-icon">⑂</span><span>Push to main</span><small>a1c9f3e</small></div>
+              <div class="pipeline-row"><span class="check-icon">✓</span><span>Install</span><small>8s</small></div>
+              <div class="pipeline-row"><span class="check-icon">✓</span><span>Build</span><small>12s</small></div>
+              <div class="pipeline-row"><span class="check-icon">✓</span><span>Test</span><small>48s</small></div>
+              <div class="pipeline-row"><span class="check-icon">✓</span><span>Deploy</span><small>9s</small></div>
+            </div>
+            <h3>Automation</h3>
+            <p>Streamline your workflows</p>
+          </article>
+
+          <article class="magic-card bento-integration">
+            <div class="integration-orbit" aria-hidden="true">
+              <span class="integration-node node-top-left">⌘</span>
+              <span class="integration-node node-top-right">⌁</span>
+              <span class="integration-node node-center">✦</span>
+              <span class="integration-node node-bottom-left">⌘</span>
+              <span class="integration-node node-bottom-right">N</span>
+            </div>
+            <h3>Integration</h3>
+            <p>Connect your favorite tools</p>
+          </article>
+
+          <article class="magic-card bento-security">
+            <div class="security-options" aria-hidden="true">
+              <div class="security-option"><span>◇</span><b>SSO</b><i class="toggle-on"></i></div>
+              <div class="security-option"><span>◉</span><b>2FA</b><i class="toggle-on"></i></div>
+            </div>
+            <h3>Security</h3>
+            <p>Enterprise-grade protection</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="closing-cta reveal">
+        <p class="eyebrow">Ready when you are</p>
+        <h2>Make room for a better flow.</h2>
+        <a class="specular-button" href="pricing.html"><span>Explore plans</span></a>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <a class="footer-brand" href="index.html">FlowDoc</a>
+      <span>Make space for clarity.</span>
+      <a href="pricing.html">Plans <span aria-hidden="true">↗</span></a>
+    </footer>
+  </body>
+</html>

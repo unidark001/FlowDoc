@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#100f14">
+    <meta name="description" content="Choose the FlowDoc plan that fits the way you work.">
+    <title>Plans — FlowDoc</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="nav-bar" aria-label="Main navigation">
+        <a class="back-link" href="index.html"><span aria-hidden="true">←</span> Home</a>
+        <a class="brand" href="index.html" aria-label="FlowDoc home">
+          <svg class="brand-mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <path d="M7 6.5h12.5a5 5 0 0 1 5 5v14H12a5 5 0 0 1-5-5v-14Z" stroke="currentColor" stroke-width="1.7"/>
+            <path d="M12 11h7.5M12 15h8M12 19h5.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+          </svg>
+          <span>FlowDoc</span>
+        </a>
+        <a class="specular-button nav-cta" href="index.html#features"><span>Explore FlowDoc</span></a>
+      </nav>
+    </header>
+
+    <main class="pricing-main">
+      <section class="pricing-intro reveal">
+        <p class="eyebrow"><span class="status-dot"></span> Simple, honest plans</p>
+        <h1 class="split-text shiny-text">Find your flow.</h1>
+        <p class="split-text">A little clarity goes a long way. Choose the plan that works for you.</p>
+      </section>
+
+      <section class="pricing-grid" aria-label="Available plans">
+        <article class="plan-card reveal">
+          <div class="plan-title">
+            <span class="plan-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none"><path d="m12 3 1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7L12 3Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="m19 15 .9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+            </span>
+            <h2>Starter</h2>
+          </div>
+          <p class="plan-price"><strong>$0</strong><span>/month</span></p>
+          <p class="plan-description">For personal projects</p>
+          <ul class="plan-features">
+            <li>3 projects</li>
+            <li>Community support</li>
+            <li>Basic organization tools</li>
+          </ul>
+          <button class="plan-button" type="button" data-plan="Starter">Get started</button>
+        </article>
+
+        <article class="plan-card plan-card-featured reveal">
+          <span class="popular-label">Popular</span>
+          <div class="plan-title">
+            <span class="plan-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none"><path d="m14 4 6 6-7.5 7.5-6-6L14 4Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="m13 5 3-2 5 5-2 3M5.5 12.5 3 15v6h6l2.5-2.5M13 11l-2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <h2>Pro</h2>
+          </div>
+          <p class="plan-price"><strong>$24</strong><span>/month</span></p>
+          <p class="plan-description">For growing teams</p>
+          <ul class="plan-features">
+            <li>Unlimited projects</li>
+            <li>Priority support</li>
+            <li>Advanced organization</li>
+          </ul>
+          <button class="plan-button plan-button-primary" type="button" data-plan="Pro">Upgrade to Pro</button>
+        </article>
+
+        <article class="plan-card reveal">
+          <div class="plan-title">
+            <span class="plan-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M16 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 18.5V20M10 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM16 4.2a3.5 3.5 0 0 1 0 6.7M20 20v-1.5a3.5 3.5 0 0 0-2.5-3.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </span>
+            <h2>Team</h2>
+          </div>
+          <p class="plan-price"><strong>$59</strong><span>/month</span></p>
+          <p class="plan-description">For organizations</p>
+          <ul class="plan-features">
+            <li>Shared workspaces</li>
+            <li>Team support</li>
+            <li>Dedicated workspace controls</li>
+          </ul>
+          <button class="plan-button" type="button" data-plan="Team">Contact sales</button>
+        </article>
+      </section>
+      <p class="plan-feedback" role="status" aria-live="polite"></p>
+      <p class="pricing-note">No payment is collected on this preview site.</p>
+    </main>
+
+    <footer class="site-footer">
+      <a class="footer-brand" href="index.html">FlowDoc</a>
+      <span>Make space for clarity.</span>
+      <a href="index.html">Back home <span aria-hidden="true">↗</span></a>
+    </footer>
+  </body>
+</html>
