@@ -193,6 +193,30 @@ document.querySelectorAll("[data-plan]").forEach((button) => {
   });
 });
 
+const signInForm = document.querySelector(".sign-in-form");
+
+if (signInForm) {
+  signInForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const feedback = document.querySelector(".auth-feedback");
+    if (feedback) {
+      feedback.textContent = "Sign-in is coming soon on this preview site.";
+    }
+  });
+}
+
+const passwordToggle = document.querySelector(".password-toggle");
+const passwordInput = document.querySelector("#password");
+
+if (passwordToggle && passwordInput) {
+  passwordToggle.addEventListener("click", () => {
+    const isVisible = passwordInput.type === "text";
+    passwordInput.type = isVisible ? "password" : "text";
+    passwordToggle.setAttribute("aria-pressed", String(!isVisible));
+    passwordToggle.setAttribute("aria-label", isVisible ? "Show password" : "Hide password");
+  });
+}
+
 document.querySelectorAll(".feature-card, .magic-card").forEach((card) => {
   card.addEventListener("pointermove", (event) => {
     const bounds = card.getBoundingClientRect();
@@ -308,7 +332,11 @@ if (shapeGridContainer && shapeGridCanvas && shapeGridContext) {
   const cellSize = 40;
   const trail = 0.6;
   const hoverRadius = cellSize * 1.5;
-  const hoverColor = "#5c5564";
+  const getThemeColor = (property, fallback) => (
+    getComputedStyle(document.documentElement).getPropertyValue(property).trim() || fallback
+  );
+  let hoverColor = getThemeColor("--grid-hover", "#5c5564");
+  let gridLineColor = getThemeColor("--grid-line", "#2a2734");
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const litCells = new Map();
   const cascades = [];
@@ -359,7 +387,7 @@ if (shapeGridContainer && shapeGridCanvas && shapeGridContext) {
     context.setTransform(1, 0, 0, 1, 0, 0);
     context.clearRect(0, 0, shapeGridCanvas.width, shapeGridCanvas.height);
     context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-    context.strokeStyle = "#2a2734";
+    context.strokeStyle = gridLineColor;
     context.lineWidth = 1;
     context.beginPath();
 
