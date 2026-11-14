@@ -188,7 +188,7 @@ document.querySelectorAll("[data-plan]").forEach((button) => {
     const feedback = document.querySelector(".plan-feedback");
     const plan = button.getAttribute("data-plan");
     if (feedback && plan) {
-      feedback.textContent = `${plan} selected. Sign-up will be available soon.`;
+      feedback.textContent = `${plan} plan selected. Sign-up will be available soon.`;
     }
   });
 });

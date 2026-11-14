@@ -770,7 +770,9 @@ main {
 }
 
 .pipeline-row {
-  animation: pipeline-step 5.6s ease-in-out infinite;
+  opacity: 0.62;
+  transform: translateX(0);
+  animation: pipeline-step 5.6s ease-in-out infinite backwards;
 }
 
 .pipeline-row:nth-of-type(2) { animation-delay: 0s; }
@@ -809,6 +811,10 @@ main {
   color: #ebe8ef;
   font-size: 13px;
   font-weight: 700;
+}
+
+.integration-node:not(.node-center) {
+  font-size: 9px;
 }
 
 .node-top-left { top: 8px; left: 8px; }
