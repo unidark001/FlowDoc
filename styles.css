@@ -693,6 +693,7 @@ main {
 }
 
 .document-preview {
+  position: relative;
   display: flex;
   min-height: 184px;
   flex: 1;
@@ -726,23 +727,58 @@ main {
 
 .collab-cursor {
   position: absolute;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: max-content;
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.collab-pointer {
+  display: block;
+  width: 15px;
+  height: 18px;
+  overflow: visible;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+}
+
+.collab-name {
+  margin: -3px 0 0 11px;
   padding: 3px 7px;
   border-radius: 7px;
   background: #c4c0cb;
   color: #201e24;
   font-size: 9px;
   font-weight: 700;
+  line-height: 1;
 }
 
 .cursor-leo {
-  top: 41%;
-  left: 28%;
+  top: 38%;
+  left: 16%;
+  --cursor-distance: 115px;
 }
 
 .cursor-maya {
-  top: 58%;
-  right: 20%;
-  background: #f1eff4;
+  top: 56%;
+  left: 44%;
+  --cursor-distance: 100px;
+}
+
+.magic-card:hover .collab-cursor {
+  visibility: visible;
+  animation: collaborator-cursor-glide 10s linear infinite;
+}
+
+.magic-card:hover .cursor-leo {
+  animation-delay: -2s;
+}
+
+.magic-card:hover .cursor-maya {
+  animation-delay: -5s;
 }
 
 .commit-preview {
@@ -1251,6 +1287,21 @@ main {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes collaborator-cursor-glide {
+  0%, 8% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  86% {
+    opacity: 1;
+    transform: translateX(var(--cursor-distance));
+  }
+  94%, 100% {
+    opacity: 0;
+    transform: translateX(var(--cursor-distance));
+  }
+}
+
 @media (max-width: 760px) {
   .hero {
     padding: 112px 0 26px;
@@ -1417,6 +1468,13 @@ main {
   .motion-ready .split-text .letter {
     opacity: 1;
     filter: none;
+    transform: none;
+  }
+
+  .magic-card:hover .collab-cursor {
+    opacity: 1;
+    visibility: visible;
+    animation: none !important;
     transform: none;
   }
 }
