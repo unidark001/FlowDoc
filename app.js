@@ -299,3 +299,260 @@ document.querySelectorAll(".plan-card").forEach((card) => {
     card.style.setProperty("--pointer-y", "50%");
   });
 });
+
+const shapeGridContainer = document.querySelector(".page-shape-grid");
+const shapeGridCanvas = shapeGridContainer?.querySelector(".shape-grid-canvas");
+const shapeGridContext = shapeGridCanvas?.getContext("2d");
+
+if (shapeGridContainer && shapeGridCanvas && shapeGridContext) {
+  const cellSize = 40;
+  const speed = 0.25;
+  const trail = 0.6;
+  const hoverRadius = cellSize * 1.5;
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const litCells = new Map();
+  const cascades = [];
+  let width = 1;
+  let height = 1;
+  let pixelRatio = 1;
+  let offsetX = 0;
+  let offsetY = 0;
+  let elapsed = 0;
+  let previousFrame = 0;
+  let animationFrame = 0;
+  let pointerActive = false;
+  let pointerX = 0;
+  let pointerY = 0;
+  let pointerVelocityX = 0;
+  let pointerVelocityY = 0;
+  let targetX = 0;
+  let targetY = 0;
+  let spotlight = 0;
+
+  const cellKey = (column, row) => (column + 32768) * 65536 + row + 32768;
+
+  const requestShapeGridFrame = () => {
+    if (!animationFrame) animationFrame = window.requestAnimationFrame(animateShapeGrid);
+  };
+
+  const resizeShapeGrid = () => {
+    const bounds = shapeGridContainer.getBoundingClientRect();
+    width = Math.max(1, bounds.width);
+    height = Math.max(1, bounds.height);
+    pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+    const pixelCount = width * height * pixelRatio * pixelRatio;
+
+    if (pixelCount > 8000000) {
+      pixelRatio *= Math.sqrt(8000000 / pixelCount);
+    }
+
+    shapeGridCanvas.width = Math.max(1, Math.round(width * pixelRatio));
+    shapeGridCanvas.height = Math.max(1, Math.round(height * pixelRatio));
+    requestShapeGridFrame();
+  };
+
+  const drawShapeGrid = () => {
+    const context = shapeGridContext;
+    const diagonal = Math.hypot(width, height);
+    const introRadius = reducedMotion.matches ? Infinity : elapsed * diagonal * 0.9;
+    const introActive = Number.isFinite(introRadius) && introRadius < diagonal;
+    const startColumn = Math.floor(offsetX / cellSize) - 1;
+    const endColumn = Math.ceil((width + offsetX) / cellSize) + 1;
+    const startRow = Math.floor(offsetY / cellSize) - 1;
+    const endRow = Math.ceil((height + offsetY) / cellSize) + 1;
+
+    context.setTransform(1, 0, 0, 1, 0, 0);
+    context.clearRect(0, 0, shapeGridCanvas.width, shapeGridCanvas.height);
+    context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    context.strokeStyle = "#2a2734";
+    context.lineWidth = 1;
+    if (introActive) {
+      context.save();
+      context.beginPath();
+      context.arc(width / 2, height / 2, introRadius, 0, Math.PI * 2);
+      context.clip();
+    }
+
+    context.beginPath();
+
+    const firstX = ((-offsetX % cellSize) + cellSize) % cellSize;
+    const firstY = ((-offsetY % cellSize) + cellSize) % cellSize;
+
+    for (let x = firstX; x <= width; x += cellSize) {
+      context.moveTo(x, 0);
+      context.lineTo(x, height);
+    }
+
+    for (let y = firstY; y <= height; y += cellSize) {
+      context.moveTo(0, y);
+      context.lineTo(width, y);
+    }
+
+    context.stroke();
+    if (introActive) context.restore();
+
+    for (let column = startColumn; column <= endColumn; column += 1) {
+      for (let row = startRow; row <= endRow; row += 1) {
+        const key = cellKey(column, row);
+        let value = litCells.get(key) || 0;
+        const left = column * cellSize - offsetX;
+        const top = row * cellSize - offsetY;
+        const centerX = left + cellSize / 2;
+        const centerY = top + cellSize / 2;
+
+        if (introActive) {
+          const front = introRadius - Math.hypot(centerX - width / 2, centerY - height / 2);
+          if (front >= 0) {
+            value = Math.max(value, Math.exp(-((front / (cellSize * 1.4)) ** 2)) * 0.85);
+          }
+        }
+
+        for (const cascade of cascades) {
+          const ring = Math.round(Math.hypot(centerX - cascade.x, centerY - cascade.y) / cellSize);
+          const localTime = elapsed - cascade.time - ring * 0.055;
+          if (localTime < 0) continue;
+          const pulse = Math.exp(-((localTime / 0.085) ** 2))
+            * Math.max(0, 1 - ring / cascade.reach);
+          value = Math.max(value, pulse);
+        }
+
+        if (value <= 0.01) continue;
+
+        context.beginPath();
+        context.rect(left, top, cellSize, cellSize);
+        context.globalAlpha = Math.min(1, value) * 0.15;
+        context.fillStyle = "#ffffff";
+        context.fill();
+        context.globalAlpha = Math.min(1, value) * 0.85;
+        context.strokeStyle = "#ffffff";
+        context.lineWidth = 1 + value * 0.6;
+        context.shadowColor = "#ffffff";
+        context.shadowBlur = 0.35 * 16 * value;
+        context.stroke();
+        context.shadowBlur = 0;
+      }
+    }
+
+    context.globalAlpha = 1;
+  };
+
+  function animateShapeGrid(timestamp) {
+    animationFrame = 0;
+    const delta = previousFrame
+      ? Math.min((timestamp - previousFrame) / 1000, 0.05)
+      : 1 / 60;
+    previousFrame = timestamp;
+    elapsed += delta;
+
+    if (!reducedMotion.matches) {
+      const direction = Math.SQRT1_2 * speed * 60 * delta;
+      offsetX -= direction;
+      offsetY += direction;
+    }
+
+    const targetSpotlight = pointerActive ? 1 : 0;
+    spotlight += (targetSpotlight - spotlight) * (1 - Math.exp(-(targetSpotlight ? 10 : 5) * delta));
+
+    if (pointerActive) {
+      const stiffness = 220;
+      const damping = 2 * Math.sqrt(stiffness) * 0.85;
+      pointerVelocityX += (stiffness * (targetX - pointerX) - damping * pointerVelocityX) * delta;
+      pointerVelocityY += (stiffness * (targetY - pointerY) - damping * pointerVelocityY) * delta;
+      pointerX += pointerVelocityX * delta;
+      pointerY += pointerVelocityY * delta;
+    } else {
+      pointerVelocityX = 0;
+      pointerVelocityY = 0;
+    }
+
+    if (spotlight > 0.01) {
+      const worldX = pointerX + offsetX;
+      const worldY = pointerY + offsetY;
+      const centerColumn = Math.round(worldX / cellSize - 0.5);
+      const centerRow = Math.round(worldY / cellSize - 0.5);
+      const span = Math.ceil(hoverRadius / cellSize) + 2;
+
+      for (let column = centerColumn - span; column <= centerColumn + span; column += 1) {
+        for (let row = centerRow - span; row <= centerRow + span; row += 1) {
+          const distance = Math.hypot(
+            (column + 0.5) * cellSize - worldX,
+            (row + 0.5) * cellSize - worldY,
+          );
+          const amount = Math.max(0, Math.min(1, (hoverRadius - distance) / (hoverRadius * 0.85)));
+          const value = amount * amount * (3 - 2 * amount) * spotlight;
+          const key = cellKey(column, row);
+          if (value > (litCells.get(key) || 0)) litCells.set(key, value);
+        }
+      }
+    }
+
+    const decay = Math.exp(-delta / trail);
+    for (const [key, value] of litCells) {
+      const next = value * decay;
+      if (next < 0.004) litCells.delete(key);
+      else litCells.set(key, next);
+    }
+
+    const maximumCascadeAge = Math.hypot(width, height) / cellSize * 0.055 + 0.4;
+    for (let index = cascades.length - 1; index >= 0; index -= 1) {
+      if (elapsed - cascades[index].time > maximumCascadeAge) cascades.splice(index, 1);
+    }
+
+    drawShapeGrid();
+
+    if (!reducedMotion.matches || pointerActive || litCells.size || cascades.length || elapsed < 1) {
+      requestShapeGridFrame();
+    } else {
+      previousFrame = 0;
+    }
+  }
+
+  const onPointerMove = (event) => {
+    const inside = event.clientX >= 0 && event.clientX <= width
+      && event.clientY >= 0 && event.clientY <= height;
+
+    if (!inside) {
+      if (pointerActive) {
+        pointerActive = false;
+        requestShapeGridFrame();
+      }
+      return;
+    }
+
+    if (!pointerActive && spotlight < 0.02) {
+      pointerX = event.clientX;
+      pointerY = event.clientY;
+    }
+
+    pointerActive = true;
+    targetX = event.clientX;
+    targetY = event.clientY;
+    requestShapeGridFrame();
+  };
+
+  const onPointerLeave = () => {
+    pointerActive = false;
+    requestShapeGridFrame();
+  };
+
+  const onPointerDown = (event) => {
+    if (event.clientX < 0 || event.clientX > width || event.clientY < 0 || event.clientY > height) return;
+    cascades.push({
+      x: event.clientX,
+      y: event.clientY,
+      time: elapsed,
+      reach: Math.hypot(width, height) / cellSize,
+    });
+    if (cascades.length > 6) cascades.shift();
+    requestShapeGridFrame();
+  };
+
+  const resizeObserver = new ResizeObserver(resizeShapeGrid);
+  resizeObserver.observe(shapeGridContainer);
+  window.addEventListener("pointermove", onPointerMove, { passive: true });
+  window.addEventListener("pointerdown", onPointerDown, { passive: true });
+  window.addEventListener("blur", onPointerLeave);
+  document.documentElement.addEventListener("pointerleave", onPointerLeave);
+  reducedMotion.addEventListener("change", requestShapeGridFrame);
+  resizeShapeGrid();
+}
