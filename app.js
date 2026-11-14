@@ -306,7 +306,6 @@ const shapeGridContext = shapeGridCanvas?.getContext("2d");
 
 if (shapeGridContainer && shapeGridCanvas && shapeGridContext) {
   const cellSize = 40;
-  const speed = 0.25;
   const trail = 0.6;
   const hoverRadius = cellSize * 1.5;
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -315,8 +314,6 @@ if (shapeGridContainer && shapeGridCanvas && shapeGridContext) {
   let width = 1;
   let height = 1;
   let pixelRatio = 1;
-  let offsetX = 0;
-  let offsetY = 0;
   let elapsed = 0;
   let previousFrame = 0;
   let animationFrame = 0;
@@ -353,59 +350,38 @@ if (shapeGridContainer && shapeGridCanvas && shapeGridContext) {
 
   const drawShapeGrid = () => {
     const context = shapeGridContext;
-    const diagonal = Math.hypot(width, height);
-    const introRadius = reducedMotion.matches ? Infinity : elapsed * diagonal * 0.9;
-    const introActive = Number.isFinite(introRadius) && introRadius < diagonal;
-    const startColumn = Math.floor(offsetX / cellSize) - 1;
-    const endColumn = Math.ceil((width + offsetX) / cellSize) + 1;
-    const startRow = Math.floor(offsetY / cellSize) - 1;
-    const endRow = Math.ceil((height + offsetY) / cellSize) + 1;
+    const startColumn = -1;
+    const endColumn = Math.ceil(width / cellSize) + 1;
+    const startRow = -1;
+    const endRow = Math.ceil(height / cellSize) + 1;
 
     context.setTransform(1, 0, 0, 1, 0, 0);
     context.clearRect(0, 0, shapeGridCanvas.width, shapeGridCanvas.height);
     context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
     context.strokeStyle = "#2a2734";
     context.lineWidth = 1;
-    if (introActive) {
-      context.save();
-      context.beginPath();
-      context.arc(width / 2, height / 2, introRadius, 0, Math.PI * 2);
-      context.clip();
-    }
-
     context.beginPath();
 
-    const firstX = ((-offsetX % cellSize) + cellSize) % cellSize;
-    const firstY = ((-offsetY % cellSize) + cellSize) % cellSize;
-
-    for (let x = firstX; x <= width; x += cellSize) {
+    for (let x = 0; x <= width; x += cellSize) {
       context.moveTo(x, 0);
       context.lineTo(x, height);
     }
 
-    for (let y = firstY; y <= height; y += cellSize) {
+    for (let y = 0; y <= height; y += cellSize) {
       context.moveTo(0, y);
       context.lineTo(width, y);
     }
 
     context.stroke();
-    if (introActive) context.restore();
 
     for (let column = startColumn; column <= endColumn; column += 1) {
       for (let row = startRow; row <= endRow; row += 1) {
         const key = cellKey(column, row);
         let value = litCells.get(key) || 0;
-        const left = column * cellSize - offsetX;
-        const top = row * cellSize - offsetY;
+        const left = column * cellSize;
+        const top = row * cellSize;
         const centerX = left + cellSize / 2;
         const centerY = top + cellSize / 2;
-
-        if (introActive) {
-          const front = introRadius - Math.hypot(centerX - width / 2, centerY - height / 2);
-          if (front >= 0) {
-            value = Math.max(value, Math.exp(-((front / (cellSize * 1.4)) ** 2)) * 0.85);
-          }
-        }
 
         for (const cascade of cascades) {
           const ring = Math.round(Math.hypot(centerX - cascade.x, centerY - cascade.y) / cellSize);
@@ -444,12 +420,6 @@ if (shapeGridContainer && shapeGridCanvas && shapeGridContext) {
     previousFrame = timestamp;
     elapsed += delta;
 
-    if (!reducedMotion.matches) {
-      const direction = Math.SQRT1_2 * speed * 60 * delta;
-      offsetX -= direction;
-      offsetY += direction;
-    }
-
     const targetSpotlight = pointerActive ? 1 : 0;
     spotlight += (targetSpotlight - spotlight) * (1 - Math.exp(-(targetSpotlight ? 10 : 5) * delta));
 
@@ -466,17 +436,15 @@ if (shapeGridContainer && shapeGridCanvas && shapeGridContext) {
     }
 
     if (spotlight > 0.01) {
-      const worldX = pointerX + offsetX;
-      const worldY = pointerY + offsetY;
-      const centerColumn = Math.round(worldX / cellSize - 0.5);
-      const centerRow = Math.round(worldY / cellSize - 0.5);
+      const centerColumn = Math.round(pointerX / cellSize - 0.5);
+      const centerRow = Math.round(pointerY / cellSize - 0.5);
       const span = Math.ceil(hoverRadius / cellSize) + 2;
 
       for (let column = centerColumn - span; column <= centerColumn + span; column += 1) {
         for (let row = centerRow - span; row <= centerRow + span; row += 1) {
           const distance = Math.hypot(
-            (column + 0.5) * cellSize - worldX,
-            (row + 0.5) * cellSize - worldY,
+            (column + 0.5) * cellSize - pointerX,
+            (row + 0.5) * cellSize - pointerY,
           );
           const amount = Math.max(0, Math.min(1, (hoverRadius - distance) / (hoverRadius * 0.85)));
           const value = amount * amount * (3 - 2 * amount) * spotlight;
@@ -500,7 +468,7 @@ if (shapeGridContainer && shapeGridCanvas && shapeGridContext) {
 
     drawShapeGrid();
 
-    if (!reducedMotion.matches || pointerActive || litCells.size || cascades.length || elapsed < 1) {
+    if (pointerActive || litCells.size || cascades.length || spotlight > 0.005) {
       requestShapeGridFrame();
     } else {
       previousFrame = 0;
