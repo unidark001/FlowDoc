@@ -289,17 +289,45 @@ main {
 }
 
 .shiny-text {
+  display: grid;
+  grid-template-areas: "text";
   color: #faf9fc;
   animation: none;
 }
 
-.shiny-text .letter {
-  background: linear-gradient(105deg, #fff 20%, #b8b5c0 39%, #fff 49%, #c1bdc8 59%, #fff 74%);
-  background-size: 240% 100%;
+.shiny-base,
+.shiny-overlay {
+  grid-area: text;
+  justify-self: center;
+  width: max-content;
+  max-width: 100%;
+}
+
+.shiny-base {
+  color: #faf9fc;
+}
+
+.shiny-overlay {
+  color: transparent;
+  background: linear-gradient(
+    110deg,
+    transparent 0 42%,
+    rgba(255, 255, 255, 0.2) 47%,
+    #fff 50%,
+    rgba(255, 255, 255, 0.2) 53%,
+    transparent 58% 100%
+  );
+  background-position: 100% 0;
+  background-size: 300% 100%;
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  animation: text-shine 6s ease-in-out infinite;
+  animation: text-shine 3.4s linear infinite paused;
+  pointer-events: none;
+}
+
+.motion-ready .is-visible .shiny-overlay {
+  animation-play-state: running;
 }
 
 .hero-description {
@@ -524,10 +552,46 @@ main {
   padding-top: 12px;
 }
 
-.analytics-chart {
+.analytics-chart-wrap {
+  position: relative;
   width: 100%;
   height: 66px;
+  outline: none;
+  touch-action: pan-y;
+  cursor: crosshair;
+}
+
+.analytics-chart-wrap:focus-visible {
+  border-radius: 6px;
+  outline: 2px solid rgba(245, 241, 252, 0.75);
+  outline-offset: 3px;
+}
+
+.analytics-chart {
+  width: 100%;
+  height: 100%;
   overflow: visible;
+}
+
+.chart-crosshair {
+  stroke: rgba(235, 231, 242, 0.36);
+  stroke-dasharray: 2 3;
+  stroke-width: 1;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.chart-marker {
+  fill: #f4f2f7;
+  stroke: #1c1a21;
+  stroke-width: 2.5;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.analytics-chart-wrap.is-active-point .chart-crosshair,
+.analytics-chart-wrap.is-active-point .chart-marker {
+  opacity: 1;
 }
 
 .chart-area {
@@ -545,7 +609,7 @@ main {
 
 .dashboard-chart {
   display: flex;
-  height: 66px;
+  height: 54px;
   align-items: flex-end;
   gap: 6px;
 }
@@ -557,12 +621,34 @@ main {
   background: #45424b;
 }
 
-.dashboard-chart span:nth-child(1) { height: 48%; }
-.dashboard-chart span:nth-child(2) { height: 75%; }
-.dashboard-chart span:nth-child(3) { height: 61%; }
-.dashboard-chart span:nth-child(4) { height: 90%; }
-.dashboard-chart span:nth-child(5) { height: 68%; }
+.dashboard-chart span:nth-child(1) { height: 27%; }
+.dashboard-chart span:nth-child(2) { height: 39%; }
+.dashboard-chart span:nth-child(3) { height: 52%; }
+.dashboard-chart span:nth-child(4) { height: 68%; }
+.dashboard-chart span:nth-child(5) { height: 83%; }
 .dashboard-chart span:nth-child(6) { height: 100%; background: #f2f0f5; }
+
+.bento-dashboard .metric-heading {
+  margin-bottom: 5px;
+}
+
+.bento-dashboard .metric-heading strong {
+  font-size: 15px;
+}
+
+.dashboard-periods {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  margin-top: 4px;
+  color: #77737e;
+  font-size: 8px;
+}
+
+.dashboard-periods span {
+  flex: 1;
+  text-align: center;
+}
 
 .document-preview {
   display: flex;
@@ -658,6 +744,15 @@ main {
   color: #a09ca6;
   font-size: 9px;
 }
+
+.pipeline-row {
+  animation: pipeline-step 5.6s ease-in-out infinite;
+}
+
+.pipeline-row:nth-of-type(2) { animation-delay: 0s; }
+.pipeline-row:nth-of-type(3) { animation-delay: 1.1s; }
+.pipeline-row:nth-of-type(4) { animation-delay: 2.2s; }
+.pipeline-row:nth-of-type(5) { animation-delay: 3.3s; }
 
 .check-icon {
   display: grid;
@@ -837,7 +932,49 @@ main {
   min-height: 372px;
   flex-direction: column;
   padding: 22px;
+  isolation: isolate;
   transition: transform 220ms ease, border-color 220ms ease;
+}
+
+.plan-card::before,
+.plan-card::after {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  border-radius: inherit;
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms ease;
+}
+
+.plan-card::before {
+  background-image:
+    radial-gradient(circle, rgba(220, 214, 232, 0.3) 1px, transparent 1.3px),
+    radial-gradient(
+      circle 210px at var(--pointer-x, 50%) var(--pointer-y, 50%),
+      rgba(228, 222, 241, 0.12),
+      transparent 72%
+    );
+  background-position: 0 0, 0 0;
+  background-size: 9px 9px, 100% 100%;
+}
+
+.plan-card::after {
+  border: 1px solid rgba(238, 233, 247, 0.06);
+  box-shadow: inset 0 0 32px rgba(229, 223, 242, 0.035);
+}
+
+.plan-card:hover::before,
+.plan-card:hover::after,
+.plan-card:focus-within::before,
+.plan-card:focus-within::after {
+  opacity: 1;
+}
+
+.plan-card:hover::before,
+.plan-card:focus-within::before {
+  animation: pricing-dots 8s linear infinite;
 }
 
 .plan-card:hover {
@@ -847,18 +984,11 @@ main {
 
 .plan-card-featured {
   border-color: rgba(236, 230, 248, 0.2);
-  background:
-    radial-gradient(circle, rgba(212, 205, 225, 0.16) 1px, transparent 1.2px) 0 0 / 8px 8px,
-    linear-gradient(145deg, rgba(39, 36, 46, 0.97), rgba(23, 21, 28, 0.98));
 }
 
-.plan-card-featured::after {
-  position: absolute;
-  z-index: 0;
-  inset: 0;
-  background: radial-gradient(ellipse at 50% 0, rgba(214, 205, 230, 0.08), transparent 70%);
-  content: "";
-  pointer-events: none;
+.plan-card > * {
+  position: relative;
+  z-index: 1;
 }
 
 .plan-title,
@@ -1040,8 +1170,28 @@ main {
 }
 
 @keyframes text-shine {
-  0%, 15% { background-position: 100% 50%; }
-  65%, 100% { background-position: 0 50%; }
+  from { background-position: 100% 0; }
+  to { background-position: 0 0; }
+}
+
+@keyframes pipeline-step {
+  0%, 5%, 26%, 100% {
+    background: transparent;
+    box-shadow: none;
+    opacity: 0.62;
+    transform: translateX(0);
+  }
+  8%, 22% {
+    background: linear-gradient(110deg, #393540, #29262f);
+    box-shadow: inset 0 0 0 1px rgba(235, 230, 245, 0.08);
+    opacity: 1;
+    transform: translateX(2px);
+  }
+}
+
+@keyframes pricing-dots {
+  from { background-position: 0 0, 0 0; }
+  to { background-position: 18px 18px, 0 0; }
 }
 
 @keyframes letter-rise {
