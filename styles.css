@@ -382,6 +382,14 @@ main {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
+  padding: 14px;
+  border: 1px solid rgba(235, 230, 245, 0.1);
+  border-radius: 28px;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(93, 78, 115, 0.13), transparent 68%),
+    linear-gradient(145deg, rgba(30, 28, 37, 0.94), rgba(17, 16, 21, 0.96));
+  box-shadow: 0 26px 70px rgba(0, 0, 0, 0.32), inset 0 1px rgba(255, 255, 255, 0.045);
+  backdrop-filter: blur(16px);
 }
 
 .feature-card,
