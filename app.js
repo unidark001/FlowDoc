@@ -220,6 +220,73 @@ document.querySelectorAll(".feature-card, .magic-card").forEach((card) => {
   }
 });
 
+const collaborationCard = document.querySelector(".bento-collaboration");
+
+if (collaborationCard) {
+  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const cursors = [
+    {
+      element: collaborationCard.querySelector(".cursor-leo"),
+      phase: 0,
+      period: 12,
+      radiusX: 12,
+      radiusY: 4,
+      wobbleX: 2,
+      wobbleY: 1.5,
+    },
+    {
+      element: collaborationCard.querySelector(".cursor-maya"),
+      phase: 2.4,
+      period: 14,
+      radiusX: 10,
+      radiusY: 5,
+      wobbleX: 2.4,
+      wobbleY: 1.5,
+    },
+  ].filter((cursor) => cursor.element);
+  let motionSpeed = 0;
+  let targetSpeed = 0;
+  let animationFrame = 0;
+  let previousFrameTime = 0;
+
+  const animateCursors = (time) => {
+    animationFrame = 0;
+    const delta = previousFrameTime
+      ? Math.min((time - previousFrameTime) / 1000, 0.05)
+      : 0;
+    previousFrameTime = time;
+    motionSpeed += (targetSpeed - motionSpeed) * (1 - Math.exp(-delta / 0.65));
+
+    cursors.forEach((cursor) => {
+      cursor.phase += (delta * motionSpeed * 2 * Math.PI) / cursor.period;
+      const x = cursor.radiusX * Math.cos(cursor.phase)
+        + cursor.wobbleX * Math.sin(cursor.phase * 2);
+      const y = cursor.radiusY * Math.sin(cursor.phase)
+        + cursor.wobbleY * Math.sin(cursor.phase * 1.7);
+      cursor.element.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0)`;
+    });
+
+    if (targetSpeed > 0 || motionSpeed > 0.003) {
+      animationFrame = window.requestAnimationFrame(animateCursors);
+    } else {
+      motionSpeed = 0;
+      previousFrameTime = 0;
+    }
+  };
+
+  const setCursorMotion = (isHovered) => {
+    collaborationCard.classList.add("cursors-active");
+    targetSpeed = isHovered && !prefersReducedMotion.matches ? 1 : 0;
+
+    if (!animationFrame && (targetSpeed > 0 || motionSpeed > 0.003)) {
+      animationFrame = window.requestAnimationFrame(animateCursors);
+    }
+  };
+
+  collaborationCard.addEventListener("pointerenter", () => setCursorMotion(true));
+  collaborationCard.addEventListener("pointerleave", () => setCursorMotion(false));
+}
+
 document.querySelectorAll(".plan-card").forEach((card) => {
   card.addEventListener("pointermove", (event) => {
     const bounds = card.getBoundingClientRect();

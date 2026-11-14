@@ -734,6 +734,7 @@ main {
   width: max-content;
   opacity: 0;
   pointer-events: none;
+  transition: opacity 350ms ease;
   visibility: hidden;
 }
 
@@ -759,26 +760,16 @@ main {
 .cursor-leo {
   top: 38%;
   left: 16%;
-  --cursor-distance: 115px;
 }
 
 .cursor-maya {
   top: 56%;
   left: 44%;
-  --cursor-distance: 100px;
 }
 
-.magic-card:hover .collab-cursor {
+.magic-card.cursors-active .collab-cursor {
+  opacity: 1;
   visibility: visible;
-  animation: collaborator-cursor-glide 10s linear infinite;
-}
-
-.magic-card:hover .cursor-leo {
-  animation-delay: -2s;
-}
-
-.magic-card:hover .cursor-maya {
-  animation-delay: -5s;
 }
 
 .commit-preview {
@@ -1287,21 +1278,6 @@ main {
   to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes collaborator-cursor-glide {
-  0%, 8% {
-    opacity: 1;
-    transform: translateX(0);
-  }
-  86% {
-    opacity: 1;
-    transform: translateX(var(--cursor-distance));
-  }
-  94%, 100% {
-    opacity: 0;
-    transform: translateX(var(--cursor-distance));
-  }
-}
-
 @media (max-width: 760px) {
   .hero {
     padding: 112px 0 26px;
@@ -1468,13 +1444,6 @@ main {
   .motion-ready .split-text .letter {
     opacity: 1;
     filter: none;
-    transform: none;
-  }
-
-  .magic-card:hover .collab-cursor {
-    opacity: 1;
-    visibility: visible;
-    animation: none !important;
     transform: none;
   }
 }
