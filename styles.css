@@ -289,44 +289,28 @@ main {
 }
 
 .shiny-text {
-  display: grid;
-  grid-template-areas: "text";
-  color: #faf9fc;
-  animation: none;
-}
-
-.shiny-base,
-.shiny-overlay {
-  grid-area: text;
-  justify-self: center;
-  width: max-content;
-  max-width: 100%;
-}
-
-.shiny-base {
-  color: #faf9fc;
-}
-
-.shiny-overlay {
   color: transparent;
-  background: linear-gradient(
+  background-image: linear-gradient(
     110deg,
-    transparent 0 42%,
-    rgba(255, 255, 255, 0.2) 47%,
+    #faf9fc 0 42%,
+    rgba(255, 255, 255, 0.55) 47%,
     #fff 50%,
-    rgba(255, 255, 255, 0.2) 53%,
-    transparent 58% 100%
+    rgba(255, 255, 255, 0.55) 53%,
+    #faf9fc 58% 100%
   );
   background-position: 100% 0;
   background-size: 300% 100%;
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  animation: text-shine 3.4s linear infinite paused;
-  pointer-events: none;
+  animation: text-shine 3.4s linear infinite;
 }
 
-.motion-ready .is-visible .shiny-overlay {
+.motion-ready .shiny-text {
+  animation-play-state: paused;
+}
+
+.motion-ready .is-visible .shiny-text {
   animation-play-state: running;
 }
 
@@ -385,8 +369,48 @@ main {
 }
 
 .feature-card {
+  --pointer-x: 50%;
+  --pointer-y: 50%;
+  z-index: 0;
   min-height: 190px;
   padding: 21px;
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.feature-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.feature-card::before {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    circle 300px at var(--pointer-x) var(--pointer-y),
+    rgba(255, 255, 255, 0.15),
+    transparent 74%
+  );
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+
+.feature-card:hover {
+  z-index: 2;
+  transform: translateY(-3px) scale(1.025);
+  border-color: rgba(255, 255, 255, 0.58);
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, 0.08),
+    0 0 0 1px rgba(255, 255, 255, 0.22),
+    0 0 24px rgba(255, 255, 255, 0.12),
+    0 16px 32px rgba(0, 0, 0, 0.24);
+}
+
+.feature-card:hover::before {
+  opacity: 1;
 }
 
 .feature-icon,

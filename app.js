@@ -33,7 +33,7 @@ if (menuToggle && siteMenu) {
   });
 }
 
-const splitTexts = document.querySelectorAll(".split-text");
+const splitTexts = document.querySelectorAll(".split-text:not(.shiny-text)");
 
 for (const element of splitTexts) {
   const text = element.textContent?.trim().replace(/\s+/g, " ");
@@ -48,21 +48,7 @@ for (const element of splitTexts) {
     return span;
   });
 
-  if (element.classList.contains("shiny-text")) {
-    const baseText = document.createElement("span");
-    baseText.className = "shiny-base";
-    baseText.setAttribute("aria-hidden", "true");
-    baseText.append(...letters);
-
-    const shine = document.createElement("span");
-    shine.className = "shiny-overlay";
-    shine.setAttribute("aria-hidden", "true");
-    shine.textContent = text;
-
-    element.replaceChildren(baseText, shine);
-  } else {
-    element.replaceChildren(...letters);
-  }
+  element.replaceChildren(...letters);
 }
 
 const taxChart = document.querySelector("[data-tax-chart]");
@@ -207,7 +193,7 @@ document.querySelectorAll("[data-plan]").forEach((button) => {
   });
 });
 
-document.querySelectorAll(".magic-card").forEach((card) => {
+document.querySelectorAll(".feature-card, .magic-card").forEach((card) => {
   card.addEventListener("pointermove", (event) => {
     const bounds = card.getBoundingClientRect();
     card.style.setProperty("--pointer-x", `${event.clientX - bounds.left}px`);
@@ -219,17 +205,19 @@ document.querySelectorAll(".magic-card").forEach((card) => {
     card.style.setProperty("--pointer-y", "50%");
   });
 
-  card.addEventListener("click", () => {
-    card.classList.remove("is-clicked");
-    void card.offsetWidth;
-    card.classList.add("is-clicked");
-  });
-
-  card.addEventListener("animationend", (event) => {
-    if (event.animationName === "bento-click") {
+  if (card.classList.contains("magic-card")) {
+    card.addEventListener("click", () => {
       card.classList.remove("is-clicked");
-    }
-  });
+      void card.offsetWidth;
+      card.classList.add("is-clicked");
+    });
+
+    card.addEventListener("animationend", (event) => {
+      if (event.animationName === "bento-click") {
+        card.classList.remove("is-clicked");
+      }
+    });
+  }
 });
 
 document.querySelectorAll(".plan-card").forEach((card) => {
