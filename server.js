@@ -130,7 +130,8 @@ const parseJsonBody = (request) => new Promise((resolve, reject) => {
 
 const rateBuckets = new Map();
 const isRateLimited = (request) => {
-  const key = request.socket.remoteAddress || "unknown";
+  const forwarded = String(request.headers["x-forwarded-for"] || "").split(",")[0].trim();
+  const key = forwarded || request.socket.remoteAddress || "unknown";
   const now = Date.now();
   const bucket = rateBuckets.get(key);
   if (!bucket || now - bucket.start > RATE_LIMIT.windowMs) {

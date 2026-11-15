@@ -44,11 +44,19 @@ export const normalizeBankCsv = (text) => {
   const raw = rows.map((cells, index) => {
     const debit = numeric(cells[debitColumn]); const credit = numeric(cells[creditColumn]);
     const amount = amountColumn >= 0 ? numeric(cells[amountColumn]) : (Number.isFinite(debit) ? -Math.abs(debit) : Math.abs(credit));
-    return { id: index, date: String(cells[dateColumn] || "").trim(), rawDescription: String(cells[descriptionColumn] || "").trim(), description: cleanMerchant(cells[descriptionColumn]), amount };
+    return { id: index, sourceIndex: index, date: String(cells[dateColumn] || "").trim(), rawDescription: String(cells[descriptionColumn] || "").trim(), description: cleanMerchant(cells[descriptionColumn]), amount };
   }).filter((row) => Number.isFinite(row.amount) && row.amount !== 0);
   // Split debit/credit files are unambiguous. For a signed amount column, deposits are
   // normally the sign minority with income language; retain both so audit ratios work.
   const expensesAreNegative = amountColumn >= 0 && raw.some((row) => row.amount < 0) && raw.some((row) => row.amount > 0);
-  const transactions = raw.map((row) => ({ ...row, kind: debitColumn >= 0 ? "expense" : expensesAreNegative ? (row.amount < 0 ? "expense" : "income") : "expense", amount: Math.abs(row.amount) }));
+  const transactions = raw.map((row) => {
+    const debit = numeric(rows[row.sourceIndex][debitColumn]);
+    const isSplitExpense = debitColumn >= 0 && Number.isFinite(debit) && debit !== 0;
+    const kind = debitColumn >= 0
+        ? (isSplitExpense ? "expense" : "income")
+        : expensesAreNegative ? (row.amount < 0 ? "expense" : "income") : "expense";
+    const { sourceIndex, ...transaction } = row;
+    return { ...transaction, kind, amount: Math.abs(row.amount) };
+  });
   return { transactions, detected: { date: headers[dateColumn], description: headers[descriptionColumn], amount: headers[amountColumn] || `${headers[debitColumn] || ""}/${headers[creditColumn] || ""}`, expensesAreNegative } };
 };
