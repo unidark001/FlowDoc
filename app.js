@@ -33,22 +33,47 @@ if (menuToggle && siteMenu) {
   });
 }
 
-const splitTexts = document.querySelectorAll(".split-text:not(.shiny-text)");
+const splitTexts = document.querySelectorAll(".split-text");
 
 for (const element of splitTexts) {
   const text = element.textContent?.trim().replace(/\s+/g, " ");
   if (!text) continue;
 
   element.setAttribute("aria-label", text);
-  const letters = Array.from(text).map((character, index) => {
-    const span = document.createElement("span");
-    span.className = character === " " ? "letter letter-space" : "letter";
-    span.textContent = character === " " ? "\u00a0" : character;
-    span.style.setProperty("--letter-index", String(index));
-    return span;
+  const isShinyText = element.classList.contains("shiny-text");
+  if (isShinyText) {
+    const characterCount = Array.from(text).length;
+    element.style.setProperty("--shine-start-delay", `${1250 + (characterCount - 1) * 50}ms`);
+  }
+
+  let letterIndex = 0;
+  const words = text.split(/(\s+)/).filter(Boolean).map((part) => {
+    if (/^\s+$/.test(part)) {
+      letterIndex += 1;
+      return document.createTextNode(" ");
+    }
+
+    const word = document.createElement("span");
+    word.className = "split-word";
+    for (const character of Array.from(part)) {
+      const letter = document.createElement("span");
+      letter.className = "letter";
+      letter.textContent = character;
+      letter.style.setProperty("--letter-index", String(letterIndex));
+      letterIndex += 1;
+      word.append(letter);
+    }
+    return word;
   });
 
-  element.replaceChildren(...letters);
+  element.replaceChildren(...words);
+  if (isShinyText) {
+    const overlay = document.createElement("span");
+    overlay.className = "shiny-text-overlay";
+    overlay.setAttribute("aria-hidden", "true");
+    overlay.textContent = text;
+    element.append(overlay);
+  }
 }
 
 const taxChart = document.querySelector("[data-tax-chart]");
@@ -223,68 +248,159 @@ document.querySelectorAll(".feature-card, .magic-card").forEach((card) => {
 const collaborationCard = document.querySelector(".bento-collaboration");
 
 if (collaborationCard) {
+  const documentPreview = collaborationCard.querySelector(".document-preview");
+  const startButton = documentPreview?.querySelector(".demo-start");
   const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const cursors = [
     {
       element: collaborationCard.querySelector(".cursor-leo"),
-      phase: 0,
-      period: 12,
-      radiusX: 12,
-      radiusY: 4,
-      wobbleX: 2,
-      wobbleY: 1.5,
+      startX: 0.16,
+      startY: 0.38,
+      phaseOffset: 0,
+      wanderStart: 0,
     },
     {
       element: collaborationCard.querySelector(".cursor-maya"),
-      phase: 2.4,
-      period: 14,
-      radiusX: 10,
-      radiusY: 5,
-      wobbleX: 2.4,
-      wobbleY: 1.5,
+      startX: 0.44,
+      startY: 0.56,
+      phaseOffset: 2.2,
+      wanderStart: 0,
     },
   ].filter((cursor) => cursor.element);
-  let motionSpeed = 0;
-  let targetSpeed = 0;
-  let animationFrame = 0;
-  let previousFrameTime = 0;
 
-  const animateCursors = (time) => {
-    animationFrame = 0;
-    const delta = previousFrameTime
-      ? Math.min((time - previousFrameTime) / 1000, 0.05)
-      : 0;
-    previousFrameTime = time;
-    motionSpeed += (targetSpeed - motionSpeed) * (1 - Math.exp(-delta / 0.65));
+  if (documentPreview && startButton && cursors.length) {
+    const phases = [
+      { type: "wander", duration: 5.5 },
+      ...cursors.flatMap((_, cursorIndex) => [
+        { type: "approach", cursorIndex, duration: 1.1 },
+        { type: "click", cursorIndex, duration: 0.3 },
+        { type: "return", cursorIndex, duration: 0.9 },
+      ]),
+    ];
+    const positions = cursors.map((cursor) => ({ x: cursor.startX, y: cursor.startY }));
+    let phaseIndex = 0;
+    let phaseElapsed = 0;
+    let previousFrameTime = 0;
+    let animationFrame = 0;
+    let actionStart = null;
+
+    const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+    const getStartPosition = () => {
+      const previewBounds = documentPreview.getBoundingClientRect();
+      const buttonBounds = startButton.getBoundingClientRect();
+      return {
+        x: clamp((buttonBounds.left + buttonBounds.width / 2 - previewBounds.left) / previewBounds.width, 0, 1),
+        y: clamp((buttonBounds.top + buttonBounds.height / 2 - previewBounds.top) / previewBounds.height, 0, 1),
+      };
+    };
+    const setPosition = (cursor, position) => {
+      cursor.element.style.left = `${position.x * 100}%`;
+      cursor.element.style.top = `${position.y * 100}%`;
+    };
+    const getWanderPosition = (cursor, time) => {
+      const elapsed = Math.max(0, time - cursor.wanderStart);
+      const angle = elapsed * 1.5 + cursor.phaseOffset;
+      const x = cursor.startX
+        + 0.1 * (Math.sin(angle) - Math.sin(cursor.phaseOffset))
+        + 0.035 * (Math.sin(angle * 2.3) - Math.sin(cursor.phaseOffset * 2.3));
+      const y = cursor.startY
+        + 0.13 * (Math.sin(angle * 0.76) - Math.sin(cursor.phaseOffset * 0.76))
+        + 0.055 * (Math.sin(angle * 1.9) - Math.sin(cursor.phaseOffset * 1.9));
+
+      return { x: clamp(x, 0.02, 0.85), y: clamp(y, 0.08, 0.82) };
+    };
+    const enterPhase = (nextIndex, time) => {
+      const previousPhase = phases[phaseIndex];
+      if (previousPhase.type === "click") {
+        startButton.classList.remove("is-clicked");
+        cursors[previousPhase.cursorIndex].element.classList.remove("is-clicking");
+      }
+      if (previousPhase.type === "return") {
+        cursors[previousPhase.cursorIndex].wanderStart = time;
+      }
+
+      phaseIndex = nextIndex % phases.length;
+      phaseElapsed = 0;
+      const nextPhase = phases[phaseIndex];
+      if (nextPhase.type === "approach" || nextPhase.type === "return") {
+        actionStart = { ...positions[nextPhase.cursorIndex] };
+      }
+      if (nextPhase.type === "click") {
+        startButton.classList.add("is-clicked");
+        cursors[nextPhase.cursorIndex].element.classList.add("is-clicking");
+      }
+    };
+    const renderFrame = (time) => {
+      animationFrame = 0;
+      const seconds = time / 1000;
+      const delta = previousFrameTime
+        ? Math.min((time - previousFrameTime) / 1000, 0.05)
+        : 0;
+      previousFrameTime = time;
+      phaseElapsed += delta;
+
+      while (phaseElapsed >= phases[phaseIndex].duration) {
+        phaseElapsed -= phases[phaseIndex].duration;
+        enterPhase(phaseIndex + 1, seconds);
+      }
+
+      const phase = phases[phaseIndex];
+      cursors.forEach((cursor, cursorIndex) => {
+        let position = getWanderPosition(cursor, seconds);
+        if (phase.type !== "wander" && phase.cursorIndex === cursorIndex) {
+          const target = getStartPosition();
+          if (phase.type === "click") {
+            position = target;
+          } else {
+            const progress = clamp(phaseElapsed / phase.duration, 0, 1);
+            const eased = phase.type === "approach"
+              ? 1 - (1 - progress) ** 3
+              : progress * progress * (3 - 2 * progress);
+            const destination = phase.type === "approach"
+              ? target
+              : { x: cursor.startX, y: cursor.startY };
+            position = {
+              x: actionStart.x + (destination.x - actionStart.x) * eased,
+              y: actionStart.y + (destination.y - actionStart.y) * eased,
+            };
+          }
+        }
+
+        positions[cursorIndex] = position;
+        setPosition(cursor, position);
+      });
+
+      if (!prefersReducedMotion.matches) {
+        animationFrame = window.requestAnimationFrame(renderFrame);
+      }
+    };
+    const updateCursorMotion = () => {
+      if (prefersReducedMotion.matches) {
+        if (animationFrame) window.cancelAnimationFrame(animationFrame);
+        animationFrame = 0;
+        previousFrameTime = 0;
+        startButton.classList.remove("is-clicked");
+        cursors.forEach((cursor, index) => {
+          cursor.element.classList.remove("is-clicking");
+          positions[index] = { x: cursor.startX, y: cursor.startY };
+          setPosition(cursor, positions[index]);
+        });
+        return;
+      }
+
+      if (!animationFrame) {
+        previousFrameTime = 0;
+        animationFrame = window.requestAnimationFrame(renderFrame);
+      }
+    };
 
     cursors.forEach((cursor) => {
-      cursor.phase += (delta * motionSpeed * 2 * Math.PI) / cursor.period;
-      const x = cursor.radiusX * Math.cos(cursor.phase)
-        + cursor.wobbleX * Math.sin(cursor.phase * 2);
-      const y = cursor.radiusY * Math.sin(cursor.phase)
-        + cursor.wobbleY * Math.sin(cursor.phase * 1.7);
-      cursor.element.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0)`;
+      cursor.wanderStart = performance.now() / 1000;
+      setPosition(cursor, { x: cursor.startX, y: cursor.startY });
     });
-
-    if (targetSpeed > 0 || motionSpeed > 0.003) {
-      animationFrame = window.requestAnimationFrame(animateCursors);
-    } else {
-      motionSpeed = 0;
-      previousFrameTime = 0;
-    }
-  };
-
-  const setCursorMotion = (isHovered) => {
-    collaborationCard.classList.add("cursors-active");
-    targetSpeed = isHovered && !prefersReducedMotion.matches ? 1 : 0;
-
-    if (!animationFrame && (targetSpeed > 0 || motionSpeed > 0.003)) {
-      animationFrame = window.requestAnimationFrame(animateCursors);
-    }
-  };
-
-  collaborationCard.addEventListener("pointerenter", () => setCursorMotion(true));
-  collaborationCard.addEventListener("pointerleave", () => setCursorMotion(false));
+    updateCursorMotion();
+    prefersReducedMotion.addEventListener("change", updateCursorMotion);
+  }
 }
 
 document.querySelectorAll(".plan-card").forEach((card) => {

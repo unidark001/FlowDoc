@@ -315,29 +315,38 @@ main {
 }
 
 .shiny-text {
+  color: #b5b5b5;
+}
+
+.shiny-text-overlay {
+  position: absolute;
+  inset: 0;
+  display: block;
   color: transparent;
+  font: inherit;
+  letter-spacing: inherit;
+  line-height: inherit;
+  text-align: inherit;
+  white-space: inherit;
   background-image: linear-gradient(
     110deg,
-    #faf9fc 0 42%,
-    rgba(255, 255, 255, 0.55) 47%,
+    transparent 0%,
+    transparent 41%,
+    rgba(255, 255, 255, 0.35) 46%,
     #fff 50%,
-    rgba(255, 255, 255, 0.55) 53%,
-    #faf9fc 58% 100%
+    rgba(255, 255, 255, 0.35) 54%,
+    transparent 59%,
+    transparent 100%
   );
   background-position: 100% 0;
-  background-size: 300% 100%;
+  background-size: 250% 100%;
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  animation: text-shine 3.4s linear infinite;
-}
-
-.motion-ready .shiny-text {
-  animation-play-state: paused;
-}
-
-.motion-ready .is-visible .shiny-text {
-  animation-play-state: running;
+  animation: shiny-text-sweep 2s linear infinite;
+  animation-delay: var(--shine-start-delay, 0ms);
+  animation-fill-mode: both;
+  pointer-events: none;
 }
 
 .hero-description {
@@ -735,7 +744,7 @@ main {
   justify-content: center;
   gap: 9px;
   margin-bottom: 6px;
-  padding: 16px;
+  padding: 16px 16px 42px;
   border: 1px solid rgba(235, 230, 245, 0.08);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.025);
@@ -762,14 +771,13 @@ main {
 .collab-cursor {
   position: absolute;
   z-index: 3;
+  top: 0;
+  left: 0;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   width: max-content;
-  opacity: 0;
   pointer-events: none;
-  transition: opacity 350ms ease;
-  visibility: hidden;
 }
 
 .collab-pointer {
@@ -778,6 +786,8 @@ main {
   height: 18px;
   overflow: visible;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+  transform-origin: 2px 2px;
+  transition: transform 140ms ease;
 }
 
 .collab-name {
@@ -791,19 +801,32 @@ main {
   line-height: 1;
 }
 
-.cursor-leo {
-  top: 38%;
-  left: 16%;
+.collab-cursor.is-clicking .collab-pointer {
+  transform: scale(0.78);
 }
 
-.cursor-maya {
-  top: 56%;
-  left: 44%;
+.demo-start {
+  position: absolute;
+  right: 12px;
+  bottom: 11px;
+  z-index: 2;
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 7px;
+  background: linear-gradient(110deg, #393540, #29262f);
+  color: #f5f3f8;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  pointer-events: none;
+  transition: transform 140ms ease, background 140ms ease, box-shadow 140ms ease;
 }
 
-.magic-card.cursors-active .collab-cursor {
-  opacity: 1;
-  visibility: visible;
+.demo-start.is-clicked {
+  transform: scale(0.92);
+  background: #f5f3f8;
+  color: #25232a;
+  box-shadow: 0 0 16px rgba(245, 243, 248, 0.5);
 }
 
 .commit-preview {
@@ -858,6 +881,14 @@ main {
 .pipeline-row:nth-of-type(3) { animation-delay: 1.1s; }
 .pipeline-row:nth-of-type(4) { animation-delay: 2.2s; }
 .pipeline-row:nth-of-type(5) { animation-delay: 3.3s; }
+
+.feature-grid > .feature-card:nth-child(2) { --card-reveal-delay: 120ms; }
+.feature-grid > .feature-card:nth-child(3) { --card-reveal-delay: 240ms; }
+.magic-bento > .magic-card:nth-child(2) { --card-reveal-delay: 120ms; }
+.magic-bento > .magic-card:nth-child(3) { --card-reveal-delay: 240ms; }
+.magic-bento > .magic-card:nth-child(4) { --card-reveal-delay: 360ms; }
+.magic-bento > .magic-card:nth-child(5) { --card-reveal-delay: 480ms; }
+.magic-bento > .magic-card:nth-child(6) { --card-reveal-delay: 600ms; }
 
 .check-icon {
   display: grid;
@@ -1256,6 +1287,32 @@ main {
   transform: translateY(0);
 }
 
+.motion-ready .feature-card,
+.motion-ready .magic-card {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 650ms ease, transform 650ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.motion-ready .is-visible .feature-card,
+.motion-ready .is-visible .magic-card {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: var(--card-reveal-delay, 0ms);
+}
+
+.motion-ready .is-visible .feature-card:hover {
+  transform: translateY(-3px) scale(1.025);
+  transition-delay: 0ms;
+  transition-duration: 180ms;
+}
+
+.motion-ready .is-visible .magic-card:hover {
+  transform: translateY(-4px) scale(1.025);
+  transition-delay: 0ms;
+  transition-duration: 180ms;
+}
+
 .split-text .letter {
   display: inline-block;
   opacity: 1;
@@ -1268,20 +1325,25 @@ main {
 }
 
 .motion-ready .is-visible .split-text .letter {
-  animation: letter-rise 700ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  animation-delay: calc(var(--letter-index) * 22ms);
+  animation: letter-rise 1.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: calc(var(--letter-index) * 50ms);
 }
 
-.motion-ready .split-text .letter-space {
-  width: 0.28em;
+.motion-ready .is-visible .split-text.shiny-text .letter {
+  animation: letter-rise 1.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: calc(var(--letter-index) * 50ms);
+}
+
+.split-text .split-word {
+  display: inline-block;
+  white-space: nowrap;
 }
 
 @keyframes specular-spin {
   to { transform: rotate(360deg); }
 }
 
-@keyframes text-shine {
-  from { background-position: 100% 0; }
+@keyframes shiny-text-sweep {
   to { background-position: 0 0; }
 }
 
@@ -1477,9 +1539,13 @@ main {
   }
 
   .motion-ready .reveal,
-  .motion-ready .split-text .letter {
+  .motion-ready .split-text .letter,
+  .motion-ready .feature-card,
+  .motion-ready .magic-card {
     opacity: 1;
     filter: none;
     transform: none;
   }
+
+  .shiny-text-overlay { animation: none; }
 }
