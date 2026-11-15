@@ -1,54 +1,76 @@
+(() => {
+"use strict";
+
 const menuToggle = document.querySelector(".menu-toggle");
 const siteMenu = document.querySelector("#site-menu");
 
 if (menuToggle && siteMenu) {
-  const closeMenu = () => {
-    menuToggle.setAttribute("aria-expanded", "false");
-    siteMenu.hidden = true;
+  const menuWrap = menuToggle.parentElement;
+  const isOpen = () => menuToggle.getAttribute("aria-expanded") === "true";
+  const setMenu = (open) => {
+    menuToggle.setAttribute("aria-expanded", String(open));
+    siteMenu.hidden = !open;
   };
 
   menuToggle.addEventListener("click", () => {
-    const isOpen = menuToggle.getAttribute("aria-expanded") === "true";
-    menuToggle.setAttribute("aria-expanded", String(!isOpen));
-    siteMenu.hidden = isOpen;
+    setMenu(!isOpen());
+    if (isOpen()) siteMenu.querySelector("a")?.focus();
   });
 
   siteMenu.addEventListener("click", (event) => {
-    if (event.target instanceof Element && event.target.closest("a")) {
-      closeMenu();
-    }
+    if (event.target instanceof Element && event.target.closest("a")) setMenu(false);
   });
 
   document.addEventListener("click", (event) => {
-    if (event.target instanceof Node && !menuToggle.parentElement.contains(event.target)) {
-      closeMenu();
-    }
+    if (isOpen() && event.target instanceof Node && !menuWrap.contains(event.target)) setMenu(false);
   });
 
+  // Close when keyboard focus leaves the menu.
+  menuWrap.addEventListener("focusout", (event) => {
+    if (isOpen() && event.relatedTarget instanceof Node && !menuWrap.contains(event.relatedTarget)) setMenu(false);
+  });
+
+  // Only react to Escape while the menu is open, so it never steals focus from other fields.
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") {
-      closeMenu();
+    if (event.key === "Escape" && isOpen()) {
+      setMenu(false);
       menuToggle.focus();
     }
   });
 }
 
+// Split into words (each word unbreakable) and letters (each animated), so lines only wrap
+// between words. Screen readers get the original sentence; the animated copy is hidden.
 const splitTexts = document.querySelectorAll(".split-text:not(.shiny-text)");
 
 for (const element of splitTexts) {
   const text = element.textContent?.trim().replace(/\s+/g, " ");
   if (!text) continue;
 
-  element.setAttribute("aria-label", text);
-  const letters = Array.from(text).map((character, index) => {
-    const span = document.createElement("span");
-    span.className = character === " " ? "letter letter-space" : "letter";
-    span.textContent = character === " " ? "\u00a0" : character;
-    span.style.setProperty("--letter-index", String(index));
-    return span;
+  const readable = document.createElement("span");
+  readable.className = "sr-only";
+  readable.textContent = text;
+
+  const visual = document.createElement("span");
+  visual.setAttribute("aria-hidden", "true");
+  let letterIndex = 0;
+  text.split(" ").forEach((word, wordIndex) => {
+    if (wordIndex > 0) visual.append(" ");
+    const wordSpan = document.createElement("span");
+    wordSpan.className = "word";
+    for (const character of word) {
+      const letter = document.createElement("span");
+      letter.className = "letter";
+      letter.textContent = character;
+      letter.style.setProperty("--letter-index", String(letterIndex));
+      letterIndex += 1;
+      wordSpan.append(letter);
+    }
+    letterIndex += 1;
+    visual.append(wordSpan);
   });
 
-  element.replaceChildren(...letters);
+  element.replaceChildren(readable, visual);
 }
 
 const taxChart = document.querySelector("[data-tax-chart]");
@@ -194,16 +216,48 @@ document.querySelectorAll("[data-plan]").forEach((button) => {
 });
 
 const signInForm = document.querySelector(".sign-in-form");
+const authFeedback = document.querySelector(".auth-feedback");
 
 if (signInForm) {
+  const showFieldError = (input, message) => {
+    const error = document.getElementById(input.getAttribute("aria-describedby") || "");
+    input.setAttribute("aria-invalid", String(Boolean(message)));
+    if (error) {
+      error.textContent = message;
+      error.hidden = !message;
+    }
+  };
+  const validateField = (input) => {
+    let message = "";
+    if (input.validity.valueMissing) message = input.type === "email" ? "Enter your email address." : "Enter your password.";
+    else if (input.validity.typeMismatch) message = "Enter a valid email, like name@example.com.";
+    else if (input.validity.tooShort) message = `Passwords are at least ${input.minLength} characters.`;
+    showFieldError(input, message);
+    return !message;
+  };
+
+  signInForm.querySelectorAll("input").forEach((input) => {
+    input.addEventListener("blur", () => { if (input.value) validateField(input); });
+    input.addEventListener("input", () => { if (input.getAttribute("aria-invalid") === "true") validateField(input); });
+  });
+
   signInForm.addEventListener("submit", (event) => {
     event.preventDefault();
-    const feedback = document.querySelector(".auth-feedback");
-    if (feedback) {
-      feedback.textContent = "Sign-in is coming soon on this preview site.";
+    const inputs = [...signInForm.querySelectorAll("input")];
+    const invalid = inputs.filter((input) => !validateField(input));
+    if (invalid.length) {
+      invalid[0].focus();
+      return;
     }
+    if (authFeedback) authFeedback.textContent = "Accounts are coming soon. You can use every tool without signing in.";
   });
 }
+
+document.querySelectorAll("[data-auth-provider]").forEach((button) => {
+  button.addEventListener("click", () => {
+    if (authFeedback) authFeedback.textContent = `${button.dataset.authProvider} sign-in is coming soon. You can use every tool without an account.`;
+  });
+});
 
 const passwordToggle = document.querySelector(".password-toggle");
 const passwordInput = document.querySelector("#password");
@@ -217,7 +271,7 @@ if (passwordToggle && passwordInput) {
   });
 }
 
-document.querySelectorAll(".feature-card, .magic-card").forEach((card) => {
+document.querySelectorAll(".feature-card, .magic-card, .plan-card").forEach((card) => {
   card.addEventListener("pointermove", (event) => {
     const bounds = card.getBoundingClientRect();
     card.style.setProperty("--pointer-x", `${event.clientX - bounds.left}px`);
@@ -250,7 +304,7 @@ if (collaborationCard) {
   const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const cursors = [
     {
-      element: collaborationCard.querySelector(".cursor-leo"),
+      element: collaborationCard.querySelector(".doc-flag-a"),
       phase: 0,
       period: 12,
       radiusX: 12,
@@ -259,7 +313,7 @@ if (collaborationCard) {
       wobbleY: 1.5,
     },
     {
-      element: collaborationCard.querySelector(".cursor-maya"),
+      element: collaborationCard.querySelector(".doc-flag-b"),
       phase: 2.4,
       period: 14,
       radiusX: 10,
@@ -311,18 +365,6 @@ if (collaborationCard) {
   collaborationCard.addEventListener("pointerleave", () => setCursorMotion(false));
 }
 
-document.querySelectorAll(".plan-card").forEach((card) => {
-  card.addEventListener("pointermove", (event) => {
-    const bounds = card.getBoundingClientRect();
-    card.style.setProperty("--pointer-x", `${event.clientX - bounds.left}px`);
-    card.style.setProperty("--pointer-y", `${event.clientY - bounds.top}px`);
-  });
-
-  card.addEventListener("pointerleave", () => {
-    card.style.setProperty("--pointer-x", "50%");
-    card.style.setProperty("--pointer-y", "50%");
-  });
-});
 
 const shapeGridContainer = document.querySelector(".page-shape-grid");
 const shapeGridCanvas = shapeGridContainer?.querySelector(".shape-grid-canvas");
@@ -505,6 +547,7 @@ if (shapeGridContainer && shapeGridCanvas && shapeGridContext) {
   }
 
   const onPointerMove = (event) => {
+    if (reducedMotion.matches) return;
     const inside = event.clientX >= 0 && event.clientX <= width
       && event.clientY >= 0 && event.clientY <= height;
 
@@ -533,6 +576,7 @@ if (shapeGridContainer && shapeGridCanvas && shapeGridContext) {
   };
 
   const onPointerDown = (event) => {
+    if (reducedMotion.matches) return;
     if (event.clientX < 0 || event.clientX > width || event.clientY < 0 || event.clientY > height) return;
     cascades.push({
       x: event.clientX,
@@ -550,6 +594,14 @@ if (shapeGridContainer && shapeGridCanvas && shapeGridContext) {
   window.addEventListener("pointerdown", onPointerDown, { passive: true });
   window.addEventListener("blur", onPointerLeave);
   document.documentElement.addEventListener("pointerleave", onPointerLeave);
-  reducedMotion.addEventListener("change", requestShapeGridFrame);
+  reducedMotion.addEventListener("change", () => {
+    if (reducedMotion.matches) {
+      pointerActive = false;
+      litCells.clear();
+      cascades.length = 0;
+    }
+    requestShapeGridFrame();
+  });
   resizeShapeGrid();
 }
+})();

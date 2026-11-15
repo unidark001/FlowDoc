@@ -9,31 +9,32 @@
       content="Scan contracts and bills for hidden fees, and find Schedule C deductions from a bank CSV without linking an account."
     >
     <title>FlowDoc — Don't Get Fooled</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap">
     <link rel="stylesheet" href="styles.css">
     <script src="app.js" defer></script>
   </head>
   <body>
+    <a class="skip-link" href="#main">Skip to content</a>
     <div class="shape-grid page-shape-grid" aria-hidden="true">
       <canvas class="shape-grid-canvas"></canvas>
     </div>
     <header class="site-header">
       <nav class="nav-bar" aria-label="Main navigation">
         <div class="nav-menu-wrap">
-          <button
-            class="menu-toggle"
-            type="button"
-            aria-expanded="false"
-            aria-controls="site-menu"
-          >
+          <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-menu">
             <span class="menu-icon" aria-hidden="true"><i></i><i></i></span>
             <span>Menu</span>
           </button>
           <div class="menu-popover" id="site-menu" hidden>
             <p class="menu-eyebrow">Explore FlowDoc</p>
-            <a href="tools.html">Tools <span>00</span></a>
-            <a href="#about">About <span>01</span></a>
+            <a href="index.html" aria-current="page">Home <span>00</span></a>
+            <a href="tools.html">Tools <span>01</span></a>
             <a href="#features">Features <span>02</span></a>
             <a href="pricing.html">Plans <span>03</span></a>
+            <a class="menu-secondary" href="sign-in.html">Sign in <span aria-hidden="true">→</span></a>
           </div>
         </div>
 
@@ -47,50 +48,59 @@
 
         <div class="nav-actions">
           <a class="nav-sign-in" href="sign-in.html">Sign in</a>
-          <a class="specular-button nav-cta" href="tools.html">
-            <span>Open tools</span>
-          </a>
+          <a class="specular-button nav-cta" href="tools.html"><span>Open tools</span></a>
         </div>
       </nav>
     </header>
 
-    <main>
+    <main id="main">
       <section class="hero reveal" id="about" aria-labelledby="hero-title">
         <p class="eyebrow"><span class="status-dot"></span> Financial and legal protection, on your terms</p>
-        <h1 class="split-text shiny-text" id="hero-title">Don't Get Fooled</h1>
+        <h1 class="shiny-text" id="hero-title">Don't Get Fooled</h1>
         <p class="hero-description split-text">
           Scan contracts and bills for hidden fees. Find side-gig tax deductions from a CSV, with no bank connection required.
         </p>
+        <div class="hero-actions">
+          <a class="specular-button" href="tools.html#contract-auditor"><span>Scan a document</span></a>
+          <a class="ghost-button" href="tools.html#write-off-hunter">Find tax deductions <span aria-hidden="true">→</span></a>
+        </div>
+        <ul class="trust-row" aria-label="Why people trust FlowDoc">
+          <li>No bank login</li>
+          <li>Text extracted on your device</li>
+          <li>3 free checks</li>
+        </ul>
         <div class="hero-orb" aria-hidden="true"></div>
       </section>
 
-      <section class="features-section reveal" id="features" aria-label="Financial and legal protection">
+      <section class="features-section reveal" id="features" aria-labelledby="features-title">
+        <h2 class="sr-only" id="features-title">What FlowDoc does</h2>
         <div class="feature-grid">
           <article class="feature-card">
             <span class="feature-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none"><path d="M13.5 2.8 5.7 13h5.6l-.8 8.2L18.3 11h-5.7l.9-8.2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
             </span>
             <h3>Spot unfair terms</h3>
-            <p>Review PDFs and bill photos on your device. Surface hidden penalties and prepare a dispute script.</p>
+            <p>Read PDFs and bill photos in your browser, surface hidden penalties, and get a ready-to-send dispute script.</p>
           </article>
           <article class="feature-card">
             <span class="feature-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none"><path d="m12 3 8 4.5-8 4.5-8-4.5L12 3Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="m4 12 8 4.5 8-4.5M4 16.5l8 4.5 8-4.5" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
             </span>
             <h3>Find gig-work deductions</h3>
-            <p>Upload a bank CSV—never link an account. Find potential Schedule C deductions and estimate savings in dollars.</p>
+            <p>Upload a bank CSV instead of linking an account. See potential Schedule C deductions and estimated savings in dollars.</p>
           </article>
           <article class="feature-card">
             <span class="feature-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none"><path d="M12 3 20 6v5.3c0 4.8-3.4 8.1-8 9.7-4.6-1.6-8-4.9-8-9.7V6l8-3Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </span>
             <h3>Private by design</h3>
-            <p>Files are parsed in your browser, without a bank login, account link, or upload to a FlowDoc backend.</p>
+            <p>Files are read on your device. Bank CSVs never leave it, and AI review only runs on the text you choose to send.</p>
           </article>
         </div>
       </section>
 
-      <section class="bento-section reveal" aria-label="FlowDoc financial protection tools">
+      <section class="bento-section reveal" aria-labelledby="bento-title">
+        <h2 class="sr-only" id="bento-title">FlowDoc tools</h2>
         <div class="magic-bento">
           <article class="magic-card bento-analytics">
             <div class="metric-heading"><strong data-tax-value>$7.7k</strong><span data-tax-period>Oct '25</span></div>
@@ -113,7 +123,7 @@
               </svg>
             </div>
             <h3>Rising tax costs</h3>
-            <p>Illustrative monthly costs</p>
+            <p>Illustrative monthly costs · hover or use arrow keys</p>
           </article>
 
           <article class="magic-card bento-dashboard">
@@ -122,39 +132,29 @@
               <span></span><span></span><span></span><span></span><span></span><span></span>
             </div>
             <div class="dashboard-periods" aria-hidden="true">
-              <span>2020</span><span>2021</span><span>2022</span><span>2023</span><span>2024</span><span>2025</span>
+              <span>'20</span><span>'21</span><span>'22</span><span>'23</span><span>'24</span><span>'25</span>
             </div>
             <h3>People affected</h3>
             <p>Illustrative estimates</p>
           </article>
 
-          <article class="magic-card bento-collaboration">
+          <a class="magic-card bento-collaboration" href="tools.html#contract-auditor">
             <div class="document-preview" aria-hidden="true">
               <div class="document-title">Service agreement</div>
               <span class="document-line line-long"></span>
-              <span class="document-line line-medium"></span>
+              <span class="document-line line-medium is-flagged"></span>
               <span class="document-line line-near-long"></span>
               <span class="document-line line-short"></span>
-              <span class="document-line line-medium"></span>
+              <span class="document-line line-medium is-flagged flag-high"></span>
               <span class="document-line line-long"></span>
-              <span class="collab-cursor cursor-leo">
-                <svg class="collab-pointer" viewBox="0 0 16 20" aria-hidden="true">
-                  <path d="M2 1.5v14l3.8-3.6 2.5 5.4 2.4-1.1-2.4-5.4 5.3-.2L2 1.5Z" fill="#fff" stroke="#25232a" stroke-width="1.2" stroke-linejoin="round"/>
-                </svg>
-                <span class="collab-name">Leo</span>
-              </span>
-              <span class="collab-cursor cursor-maya">
-                <svg class="collab-pointer" viewBox="0 0 16 20" aria-hidden="true">
-                  <path d="M2 1.5v14l3.8-3.6 2.5 5.4 2.4-1.1-2.4-5.4 5.3-.2L2 1.5Z" fill="#fff" stroke="#25232a" stroke-width="1.2" stroke-linejoin="round"/>
-                </svg>
-                <span class="collab-name">Maya</span>
-              </span>
+              <span class="doc-flag doc-flag-a"><i></i>$125 late fee</span>
+              <span class="doc-flag doc-flag-b flag-high"><i></i>Auto-renews</span>
             </div>
-            <h3>Contract &amp; bill scanner</h3>
+            <h3>Contract &amp; bill scanner <span class="card-arrow" aria-hidden="true">↗</span></h3>
             <p>Find hidden penalties and draft a dispute script.</p>
-          </article>
+          </a>
 
-          <article class="magic-card bento-automation">
+          <a class="magic-card bento-automation" href="tools.html#write-off-hunter">
             <div class="commit-preview" aria-hidden="true">
               <div class="commit-heading"><span class="branch-icon">↗</span><span>Analyze an expense CSV</span><small>Start</small></div>
               <div class="pipeline-row"><span class="check-icon">✓</span><span>Upload a bank CSV</span><small>01</small></div>
@@ -162,11 +162,11 @@
               <div class="pipeline-row"><span class="check-icon">✓</span><span>Find Schedule C deductions</span><small>03</small></div>
               <div class="pipeline-row"><span class="check-icon">✓</span><span>Estimate savings in dollars</span><small>04</small></div>
             </div>
-            <h3>Tax deduction finder</h3>
+            <h3>Tax deduction finder <span class="card-arrow" aria-hidden="true">↗</span></h3>
             <p>Turn side-gig expenses into potential tax savings.</p>
-          </article>
+          </a>
 
-          <article class="magic-card bento-integration">
+          <a class="magic-card bento-integration" href="tools.html#vault">
             <div class="integration-orbit" aria-hidden="true">
               <span class="integration-node node-top-left">PDF</span>
               <span class="integration-node node-top-right">CSV</span>
@@ -174,9 +174,9 @@
               <span class="integration-node node-bottom-left">✓</span>
               <span class="integration-node node-bottom-right">↗</span>
             </div>
-            <h3>Savings vault</h3>
+            <h3>Savings vault <span class="card-arrow" aria-hidden="true">↗</span></h3>
             <p>Track the money you keep, month after month.</p>
-          </article>
+          </a>
 
           <article class="magic-card bento-security">
             <div class="security-options" aria-hidden="true">
@@ -184,22 +184,28 @@
               <div class="security-option"><span>◉</span><b>NO BANK LINK</b><i class="toggle-on"></i></div>
             </div>
             <h3>Private by design</h3>
-            <p>Files stay in your browser. No bank login or account link.</p>
+            <p>Extraction runs on your device. No bank login or account link.</p>
           </article>
         </div>
       </section>
 
-      <section class="closing-cta reveal">
+      <section class="closing-cta reveal" aria-labelledby="cta-title">
         <p class="eyebrow">Start with 3 free checks</p>
-        <h2>Find hidden fees. Keep more of your money.</h2>
-        <a class="specular-button" href="tools.html"><span>Open the tools</span></a>
+        <h2 id="cta-title">Find hidden fees. Keep more of your money.</h2>
+        <div class="hero-actions">
+          <a class="specular-button" href="tools.html"><span>Open the tools</span></a>
+          <a class="ghost-button" href="pricing.html">See plans <span aria-hidden="true">→</span></a>
+        </div>
       </section>
     </main>
 
     <footer class="site-footer">
       <a class="footer-brand" href="index.html">FlowDoc</a>
-      <span>Financial and legal protection for everyday life.</span>
-      <a href="tools.html">Tools <span aria-hidden="true">↗</span></a>
+      <span>Financial and legal protection for everyday life. Not legal or tax advice.</span>
+      <nav class="footer-links" aria-label="Footer">
+        <a href="tools.html">Tools</a>
+        <a href="pricing.html">Plans</a>
+      </nav>
     </footer>
   </body>
 </html>
