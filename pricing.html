@@ -6,16 +6,34 @@
     <meta name="theme-color" content="#100f14">
     <meta name="description" content="Get three free checks, then choose personal or family financial and legal protection.">
     <title>Plans — FlowDoc</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap">
     <link rel="stylesheet" href="styles.css">
     <script src="app.js" defer></script>
   </head>
   <body>
+    <a class="skip-link" href="#main">Skip to content</a>
     <div class="shape-grid page-shape-grid" aria-hidden="true">
       <canvas class="shape-grid-canvas"></canvas>
     </div>
     <header class="site-header">
       <nav class="nav-bar" aria-label="Main navigation">
-        <a class="back-link" href="index.html#top"><span aria-hidden="true">←</span> Home</a>
+        <div class="nav-menu-wrap">
+          <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-menu">
+            <span class="menu-icon" aria-hidden="true"><i></i><i></i></span>
+            <span>Menu</span>
+          </button>
+          <div class="menu-popover" id="site-menu" hidden>
+            <p class="menu-eyebrow">Explore FlowDoc</p>
+            <a href="index.html#top">Home <span>00</span></a>
+            <a href="tools.html">Tools <span>01</span></a>
+            <a href="index.html#features">Features <span>02</span></a>
+            <a href="pricing.html" aria-current="page">Plans <span>03</span></a>
+            <a class="menu-secondary" href="sign-in.html">Sign in <span aria-hidden="true">→</span></a>
+          </div>
+        </div>
         <a class="brand" href="index.html#top" aria-label="FlowDoc home">
           <svg class="brand-mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
             <path d="M7 6.5h12.5a5 5 0 0 1 5 5v14H12a5 5 0 0 1-5-5v-14Z" stroke="currentColor" stroke-width="1.7"/>
@@ -23,14 +41,17 @@
           </svg>
           <span>FlowDoc</span>
         </a>
-        <a class="specular-button nav-cta" href="index.html#top"><span>Explore protection</span></a>
+        <div class="nav-actions">
+          <a class="nav-sign-in" href="sign-in.html">Sign in</a>
+          <a class="specular-button nav-cta" href="tools.html"><span>Open tools</span></a>
+        </div>
       </nav>
     </header>
 
-    <main class="pricing-main">
+    <main class="pricing-main" id="main">
       <section class="pricing-intro reveal">
         <p class="eyebrow"><span class="status-dot"></span> 3 free checks to get started</p>
-        <h1 class="split-text shiny-text">Find your flow.</h1>
+        <h1 class="shiny-text">Find your flow.</h1>
         <p class="split-text">Review contracts, bills, and side-gig expenses without connecting a bank account.</p>
       </section>
 
@@ -46,14 +67,14 @@
           <p class="plan-description">Start with 3 free checks</p>
           <ul class="plan-features">
             <li>PDF contracts and bill photos</li>
-            <li>Local browser processing</li>
+            <li>On-device text extraction</li>
             <li>No bank account connection</li>
           </ul>
-          <button class="plan-button" type="button" data-plan="Free">Try free checks</button>
+          <a class="plan-button" href="tools.html">Try free checks</a>
         </article>
 
         <article class="plan-card plan-card-featured reveal">
-          <span class="popular-label">Popular</span>
+          <span class="popular-label">Most popular</span>
           <div class="plan-title">
             <span class="plan-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none"><path d="m14 4 6 6-7.5 7.5-6-6L14 4Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="m13 5 3-2 5 5-2 3M5.5 12.5 3 15v6h6l2.5-2.5M13 11l-2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -61,9 +82,10 @@
             <h2>Personal</h2>
           </div>
           <p class="plan-price"><strong>$7</strong><span>/month</span></p>
-          <p class="plan-description">One person · or $49/year</p>
+          <p class="plan-description">One person · or $49/year (save 42%)</p>
           <ul class="plan-features">
-            <li>Contract and bill risk scans</li>
+            <li>Unlimited contract and bill scans</li>
+            <li>Deeper AI review</li>
             <li>Schedule C deduction finder</li>
             <li>Ready-to-use dispute scripts</li>
           </ul>
@@ -80,21 +102,40 @@
           <p class="plan-price"><strong>$50</strong><span>/month</span></p>
           <p class="plan-description">Protection for up to 10 people</p>
           <ul class="plan-features">
+            <li>Everything in Personal</li>
             <li>Household-wide protection</li>
-            <li>Contract and bill reviews</li>
             <li>Shared savings tracker</li>
           </ul>
           <button class="plan-button" type="button" data-plan="Family">Choose Family</button>
         </article>
       </section>
       <p class="plan-feedback" role="status" aria-live="polite"></p>
-      <p class="pricing-note">Start with 3 free checks. No payment is collected on this preview site.</p>
+      <p class="pricing-note">No payment is collected on this preview site.</p>
+
+      <section class="faq reveal" aria-labelledby="faq-title">
+        <h2 id="faq-title">Questions, answered</h2>
+        <details>
+          <summary>Do my files get uploaded?</summary>
+          <p>Text is extracted from PDFs and photos in your browser. Bank CSVs never leave your device. If you turn on Deeper AI review, only the extracted document text is sent for analysis.</p>
+        </details>
+        <details>
+          <summary>Is this legal or tax advice?</summary>
+          <p>No. FlowDoc is an educational screening tool that helps you spot terms and expenses worth asking about. Confirm decisions with a qualified attorney or CPA in your state.</p>
+        </details>
+        <details>
+          <summary>Can I cancel anytime?</summary>
+          <p>Yes. Paid plans are month to month, with no notice period and no auto-renewal surprises. We practice what we scan for.</p>
+        </details>
+      </section>
     </main>
 
     <footer class="site-footer">
       <a class="footer-brand" href="index.html#top">FlowDoc</a>
-      <span>Financial and legal protection for everyday life.</span>
-      <a href="index.html#top">Back home <span aria-hidden="true">↗</span></a>
+      <span>Financial and legal protection for everyday life. Not legal or tax advice.</span>
+      <nav class="footer-links" aria-label="Footer">
+        <a href="index.html#top">Home</a>
+        <a href="tools.html">Tools</a>
+      </nav>
     </footer>
   </body>
 </html>
