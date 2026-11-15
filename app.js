@@ -224,11 +224,34 @@ if ("IntersectionObserver" in window) {
 }
 
 document.querySelectorAll("[data-plan]").forEach((button) => {
-  button.addEventListener("click", () => {
+  button.addEventListener("click", async () => {
     const feedback = document.querySelector(".plan-feedback");
     const plan = button.getAttribute("data-plan");
-    if (feedback && plan) {
-      feedback.textContent = `${plan} plan selected. Sign-up will be available soon.`;
+    const interval = button.getAttribute("data-interval") || "month";
+    if (!feedback || !plan) return;
+    feedback.textContent = "Checking plan availability…";
+    try {
+      const config = await fetch("/api/config").then((response) => response.json());
+      if (!config.billing) {
+        feedback.textContent = "Billing is not enabled on this server. Local tools remain free.";
+        return;
+      }
+      const token = localStorage.getItem("flowdoc_access_token");
+      if (!token) {
+        sessionStorage.setItem("flowdoc_checkout_plan", JSON.stringify({ plan: plan.toLowerCase(), interval }));
+        window.location.href = "sign-in.html";
+        return;
+      }
+      const response = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ plan: plan.toLowerCase(), interval }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.url) throw new Error(result.error || "Checkout is unavailable.");
+      window.location.href = result.url;
+    } catch (error) {
+      feedback.textContent = error.message || "Unable to start checkout.";
     }
   });
 });

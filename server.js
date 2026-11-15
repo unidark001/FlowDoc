@@ -37,6 +37,8 @@ const config = {
   stripeSecretKey: process.env.STRIPE_SECRET_KEY || "",
   stripeMonthlyPrice: process.env.STRIPE_PRICE_MONTHLY || "",
   stripeYearlyPrice: process.env.STRIPE_PRICE_YEARLY || "",
+  stripeFamilyMonthlyPrice: process.env.STRIPE_FAMILY_PRICE_MONTHLY || "",
+  stripeFamilyYearlyPrice: process.env.STRIPE_FAMILY_PRICE_YEARLY || "",
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || "",
   appUrl: process.env.APP_URL || `http://localhost:${process.env.PORT || 8080}`,
   freeChecks: Number.isFinite(Number(process.env.FREE_CHECKS || 3)) ? Math.max(0, Number(process.env.FREE_CHECKS || 3)) : 3,
@@ -325,7 +327,15 @@ const handleCheckout = async (request, response) => {
   if (!user) return;
   try {
     const body = await parseJsonBody(request);
-    const price = body?.interval === "year" ? config.stripeYearlyPrice : config.stripeMonthlyPrice;
+    const plan = body?.plan === "family" ? "family" : "personal";
+    const yearly = body?.interval === "year";
+    const price = plan === "family"
+      ? (yearly ? config.stripeFamilyYearlyPrice : config.stripeFamilyMonthlyPrice)
+      : (yearly ? config.stripeYearlyPrice : config.stripeMonthlyPrice);
+    if (!price) {
+      sendJson(response, 503, { error: "The selected plan is not configured on this server." });
+      return;
+    }
     const result = await stripeRequest("checkout/sessions", {
       mode: "subscription",
       "line_items[0][price]": price,

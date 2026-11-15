@@ -2,6 +2,8 @@ https://unidark001.github.io/FlowDoc/
 
 # FlowDoc
 
+Live demo: https://flowdoc-eymd.onrender.com/index.html
+
 FlowDoc is a local-first toolkit for finding hidden contract costs and organizing
 freelancer tax paperwork. `contractAnalyzer.js` extracts terms and calculates
 deterministic contract risk, while `scheduleCEngine.js` classifies bank
