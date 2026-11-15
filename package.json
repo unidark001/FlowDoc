@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "mock": "node -e \"process.env.MOCK_AI='true';require('./server.js')\""
+    "mock": "node -e \"process.env.MOCK_AI='true';require('./server.js')\"",
+    "build": "node --check server.js && node --check tools.js && node --check src/utils/contractAnalyzer.js && node --check src/utils/csvNormalizer.js && node --check src/utils/scheduleCEngine.js && node --check src/services/aiClient.js"
   },
   "engines": {
     "node": ">=18.17"

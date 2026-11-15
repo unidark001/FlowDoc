@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="styles.css">
     <!-- PDF.js, Tesseract and PapaParse are lazy-loaded by tools.js only when a file needs them. -->
     <script src="app.js" defer></script>
-    <script src="tools.js" defer></script>
+    <script type="module" src="tools.js"></script>
   </head>
   <body class="tools-page">
     <a class="skip-link" href="#main">Skip to content</a>
@@ -124,10 +124,11 @@
                 <option value="0.22" selected>22%</option>
                 <option value="0.24">24%</option>
                 <option value="0.32">32%</option>
-                <option value="0.35">35%</option>
-                <option value="0.37">37%</option>
               </select>
             </div>
+            <label class="ai-toggle"><input type="checkbox" id="qbi-toggle"><span class="ai-toggle-track" aria-hidden="true"></span><span class="ai-toggle-copy"><strong>Include Section 199A QBI estimate</strong><small>Shows a 20% QBI adjustment estimate; eligibility varies.</small></span></label>
+            <label class="ai-toggle"><input type="checkbox" id="home-office-toggle"><span class="ai-toggle-track" aria-hidden="true"></span><span class="ai-toggle-copy"><strong>Simplified home office</strong><small>$5 per square foot, capped at 300 sq ft.</small></span></label>
+            <label class="home-office-field" for="home-office-sqft">Dedicated office sq ft <input id="home-office-sqft" type="number" min="0" max="300" value="0" disabled></label>
             <p class="panel-hint">Matched expenses start as business. Toggle any row and set a business-use percentage for mixed costs like your phone.</p>
           </div>
           <div class="results-panel tax-results" id="tax-results" tabindex="-1" aria-label="Tax deduction results">

@@ -155,10 +155,14 @@ const normalizeAnalysis = (raw) => {
   const summary = (Array.isArray(raw.summary) ? raw.summary : []).map((item) => asText(item)).filter(Boolean).slice(0, 6);
   const redFlags = (Array.isArray(raw.redFlags) ? raw.redFlags : [])
     .filter((flag) => flag && typeof flag === "object")
-    .map((flag) => ({
+    .map((flag, index) => ({
+      id: asText(flag.id, 80) || "flag-" + index,
       severity: SEVERITIES.includes(flag.severity) ? flag.severity : "Low",
       title: asText(flag.title, 120) || "Review this clause",
-      why: asText(flag.why) || "Ask a qualified professional to review this language.",
+      financialImpactDollars: Number.isFinite(Number(flag.financialImpactDollars)) && Number(flag.financialImpactDollars) >= 0 ? Math.round(Number(flag.financialImpactDollars) * 100) / 100 : 0,
+      verbatimQuote: asText(flag.verbatimQuote, 700),
+      whyItHurts: asText(flag.whyItHurts || flag.why) || "Ask a qualified professional to review this language.",
+      proposedCounterClause: asText(flag.proposedCounterClause, 800) || "Please clarify or revise this clause in writing.",
     }))
     .slice(0, 12);
   const obligations = (Array.isArray(raw.obligations) ? raw.obligations : [])
@@ -199,9 +203,10 @@ const createMockAnalysis = (text) => {
 
 const SYSTEM_PROMPT = `You are FlowDoc AI, a careful US consumer-protection document reviewer. Analyze only the supplied document. Do not invent facts or claim an outcome is definitely illegal. Use natural American English and explain risks plainly.
 Return ONLY valid JSON with exactly these keys:
+For each red flag, verbatimQuote must be an exact contiguous substring copied from the supplied document. Omit an issue if an exact quote cannot support it, and use 0 when no dollar impact can be calculated.
 - summary: array of 3-4 concise strings
 - obligations: array of objects { amount, description, note }
-- redFlags: array of objects { severity: "High" | "Medium" | "Low", title, why }
+- redFlags: array of objects { id, severity: "High" | "Medium" | "Low", title, financialImpactDollars, verbatimQuote, whyItHurts, proposedCounterClause }
 - counterScript: a practical, copyable email string
 - potentialCaughtDollars: number
 Identify dollar amounts, late fees, deposits, auto-renewals, penalties, arbitration or class-action waivers, unilateral changes, and one-sided legal terms. potentialCaughtDollars must be the sum of clearly stated avoidable fees or penalties, not rent, deposits, insurance limits, or ordinary purchase prices. Mention when a professional in the relevant state should review the clause.`;
