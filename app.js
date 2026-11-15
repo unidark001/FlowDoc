@@ -30,6 +30,56 @@ const loadPublicConfig = async () => {
 };
 const publicConfig = loadPublicConfig();
 
+// Tokens are held in localStorage for a simple browser-only integration. This is
+// documented in README; tokens are never written to URLs or logged.
+const authStore = {
+  key: "flowdoc_session",
+  read() {
+    try { return JSON.parse(localStorage.getItem(this.key) || "null"); } catch { return null; }
+  },
+  save(session) {
+    if (!session?.access_token) return;
+    localStorage.setItem(this.key, JSON.stringify({
+      access_token: session.access_token,
+      refresh_token: session.refresh_token || "",
+      expires_at: Date.now() + Number(session.expires_in || 3600) * 1000,
+      email: session.user?.email || "",
+    }));
+    // Backward-compatible key for the existing tools client.
+    localStorage.setItem("flowdoc_access_token", session.access_token);
+  },
+  clear() {
+    localStorage.removeItem(this.key);
+    localStorage.removeItem("flowdoc_access_token");
+  },
+};
+
+const refreshSession = async (config) => {
+  const session = authStore.read();
+  if (!session?.refresh_token || !config?.auth || session.expires_at > Date.now() + 60_000) return session;
+  const response = await fetch(`${config.supabaseUrl}/auth/v1/token?grant_type=refresh_token`, {
+    method: "POST",
+    headers: { apikey: config.supabaseAnonKey, "Content-Type": "application/json" },
+    body: JSON.stringify({ refresh_token: session.refresh_token }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !payload.access_token) { authStore.clear(); return null; }
+  authStore.save(payload);
+  return authStore.read();
+};
+
+// Supabase OAuth returns its session in the fragment. Persist it once, then
+// remove the fragment so tokens are never retained in the address bar/history.
+const oauthHash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+if (oauthHash.get("access_token")) {
+  authStore.save({
+    access_token: oauthHash.get("access_token"),
+    refresh_token: oauthHash.get("refresh_token"),
+    expires_in: oauthHash.get("expires_in"),
+  });
+  history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+}
+
 const menuToggle = document.querySelector(".menu-toggle");
 const siteMenu = document.querySelector("#site-menu");
 
@@ -287,6 +337,18 @@ document.querySelectorAll("[data-plan]").forEach((button) => {
 
 const signInForm = document.querySelector(".sign-in-form");
 const authFeedback = document.querySelector(".auth-feedback");
+let authMode = "signin";
+
+document.querySelectorAll("[data-auth-mode]").forEach((button) => {
+  button.addEventListener("click", () => {
+    authMode = button.dataset.authMode || "signin";
+    document.querySelectorAll("[data-auth-mode]").forEach((item) => item.setAttribute("aria-pressed", String(item === button)));
+    const title = document.querySelector("#sign-in-title");
+    const submit = signInForm?.querySelector("[type=submit]");
+    if (title) title.textContent = authMode === "signup" ? "Create account" : "Sign in";
+    if (submit) submit.textContent = authMode === "signup" ? "Create account" : "Sign in";
+  });
+});
 
 if (signInForm) {
   const showFieldError = (input, message) => {
@@ -319,27 +381,51 @@ if (signInForm) {
       invalid[0].focus();
       return;
     }
-    if (authFeedback) authFeedback.textContent = "Signing you in…";
+    if (authFeedback) authFeedback.textContent = authMode === "signup" ? "Creating your account…" : "Signing you in…";
     try {
-      const config = await fetch("/api/config").then((response) => response.json());
+      const config = await publicConfig;
       if (!config.auth) {
         if (authFeedback) authFeedback.textContent = "Demo mode is active. You can use every tool without signing in.";
         return;
       }
-      const response = await fetch(`${config.supabaseUrl}/auth/v1/token?grant_type=password`, {
+      const endpoint = authMode === "signup" ? "/auth/v1/signup" : "/auth/v1/token?grant_type=password";
+      const response = await fetch(`${config.supabaseUrl}${endpoint}`, {
         method: "POST",
         headers: { apikey: config.supabaseAnonKey, "Content-Type": "application/json" },
         body: JSON.stringify({ email: inputs[0].value.trim(), password: inputs[1].value }),
       });
       const result = await response.json().catch(() => ({}));
-      if (!response.ok || !result.access_token) throw new Error(result.error_description || "The email or password was not accepted.");
-      localStorage.setItem("flowdoc_access_token", result.access_token);
+      if (!response.ok) throw new Error(result.msg || result.error_description || result.message || "The email or password was not accepted.");
+      if (authMode === "signup" && !result.access_token) {
+        if (authFeedback) authFeedback.textContent = "Check your email to confirm your account, then sign in.";
+        return;
+      }
+      if (!result.access_token) throw new Error("The account was created, but no session was returned. Confirm your email, then sign in.");
+      authStore.save(result);
       window.location.href = "tools.html";
     } catch (error) {
       if (authFeedback) authFeedback.textContent = error.message || "Sign-in failed. Try again.";
     }
   });
 }
+
+document.querySelector("#forgot-password")?.addEventListener("click", async () => {
+  const email = document.querySelector("#email")?.value.trim();
+  if (!email) { if (authFeedback) authFeedback.textContent = "Enter your email address first."; return; }
+  try {
+    const config = await publicConfig;
+    if (!config.auth) throw new Error("Demo mode does not use accounts.");
+    const response = await fetch(`${config.supabaseUrl}/auth/v1/recover`, {
+      method: "POST",
+      headers: { apikey: config.supabaseAnonKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ email, redirect_to: `${window.location.origin}/sign-in.html` }),
+    });
+    if (!response.ok) throw new Error("Password reset could not be started.");
+    if (authFeedback) authFeedback.textContent = "If that address has an account, a password-reset email is on its way.";
+  } catch (error) {
+    if (authFeedback) authFeedback.textContent = error.message || "Password reset could not be started.";
+  }
+});
 
 document.querySelectorAll("[data-auth-provider]").forEach((button) => {
   button.addEventListener("click", async () => {

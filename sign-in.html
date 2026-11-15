@@ -36,6 +36,10 @@
         <div class="auth-form-column">
           <a class="auth-back" href="index.html"><span aria-hidden="true">←</span> Back to FlowDoc</a>
           <h1 id="sign-in-title">Sign in</h1>
+          <div class="auth-mode-switch" role="group" aria-label="Account mode">
+            <button type="button" class="text-button" data-auth-mode="signin" aria-pressed="true">Sign in</button>
+            <button type="button" class="text-button" data-auth-mode="signup" aria-pressed="false">Create account</button>
+          </div>
 
           <div class="social-auth" role="group" aria-label="Sign in with a provider">
             <button type="button" data-auth-provider="Google">
@@ -55,7 +59,7 @@
             <div class="form-field">
               <div class="field-header">
                 <label for="password">Password</label>
-                <a class="forgot-password" href="mailto:support@flowdoc.example?subject=Password%20reset">Forgot password?</a>
+                <button class="forgot-password text-button" type="button" id="forgot-password">Forgot password?</button>
               </div>
               <div class="password-field">
                 <input id="password" name="password" type="password" placeholder="Your password" autocomplete="current-password" required minlength="8" aria-describedby="password-error">
