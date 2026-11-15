@@ -1,6 +1,35 @@
 (() => {
 "use strict";
 
+// Configuration is intentionally public and contains no credentials. It keeps optional
+// account and billing controls out of demo mode instead of leaving inert buttons behind.
+const loadPublicConfig = async () => {
+  try {
+    const response = await fetch("/api/config");
+    if (!response.ok) throw new Error("Configuration unavailable");
+    const config = await response.json();
+    if (!config.auth) {
+      document.querySelectorAll(".nav-sign-in, .menu-secondary, .social-auth, .auth-divider, .sign-in-form, .auth-switch").forEach((element) => {
+        element.hidden = true;
+      });
+      document.querySelectorAll("[data-demo-note]").forEach((element) => { element.hidden = false; });
+      const feedback = document.querySelector(".auth-feedback");
+      if (feedback) feedback.textContent = "Demo mode: all local tools are free.";
+    }
+    if (!config.billing) {
+      document.querySelectorAll("[data-plan]").forEach((element) => { element.hidden = true; });
+      document.querySelectorAll(".pricing-note").forEach((element) => {
+        element.hidden = false;
+        element.textContent = config.auth ? "Billing is not enabled on this server." : "Demo mode: all local tools are free.";
+      });
+    }
+    return config;
+  } catch {
+    return { auth: false, billing: false };
+  }
+};
+const publicConfig = loadPublicConfig();
+
 const menuToggle = document.querySelector(".menu-toggle");
 const siteMenu = document.querySelector("#site-menu");
 
