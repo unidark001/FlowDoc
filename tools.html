@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#100f14">
+    <meta name="description" content="FlowDoc tools for contract red flags and 1099 Schedule C deductions.">
+    <title>Tools — FlowDoc</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/tesseract.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.3/papaparse.min.js" defer></script>
+    <script src="app.js" defer></script>
+    <script src="tools.js" defer></script>
+  </head>
+  <body class="tools-page">
+    <div class="shape-grid page-shape-grid" aria-hidden="true"><canvas class="shape-grid-canvas"></canvas></div>
+    <header class="site-header">
+      <nav class="nav-bar" aria-label="Main navigation">
+        <a class="back-link" href="index.html"><span aria-hidden="true">←</span> Home</a>
+        <a class="brand" href="index.html" aria-label="FlowDoc home">
+          <svg class="brand-mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <path d="M7 6.5h12.5a5 5 0 0 1 5 5v14H12a5 5 0 0 1-5-5v-14Z" stroke="currentColor" stroke-width="1.7"/>
+            <path d="M12 11h7.5M12 15h8M12 19h5.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+          </svg>
+          <span>FlowDoc</span>
+        </a>
+        <div class="nav-actions">
+          <span class="vault-pill">Vault <strong data-vault-total>$0</strong></span>
+          <a class="nav-sign-in" href="sign-in.html">Sign in</a>
+        </div>
+      </nav>
+    </header>
+
+    <main class="tools-main">
+      <section class="tools-intro reveal">
+        <p class="eyebrow"><span class="status-dot"></span> Your private financial defense desk</p>
+        <h1 class="split-text shiny-text">Make the fine print work for you.</h1>
+        <p class="tools-lead split-text">Run practical checks in your browser. Your files stay on this device, and nothing here is legal or tax advice.</p>
+      </section>
+
+      <section class="tool-section reveal" id="contract-auditor" aria-labelledby="contract-title">
+        <div class="tool-heading">
+          <div><p class="eyebrow">01 · Document defense</p><h2 id="contract-title">AI Contract &amp; Document Red-Flag Auditor</h2></div>
+          <span class="privacy-note">On-device extraction</span>
+        </div>
+        <div class="tool-grid">
+          <div class="tool-panel">
+            <label class="drop-zone" data-drop-target="contract-file">
+              <input id="contract-file" type="file" accept=".pdf,.png,.jpg,.jpeg">
+              <span class="drop-icon">↑</span>
+              <strong>Drop a contract or bill here</strong>
+              <span>PDF, PNG, JPG, or JPEG · text is extracted in your browser</span>
+            </label>
+            <button class="text-button" type="button" id="sample-lease">Try with Sample US Apartment Lease</button>
+            <p class="file-status" id="contract-status" role="status" aria-live="polite">No document selected.</p>
+            <textarea id="contract-text" class="contract-text" rows="8" placeholder="Extracted text will appear here. You can also paste a document excerpt to run a quick check."></textarea>
+            <button class="specular-button tool-action" type="button" id="audit-contract"><span>Audit document</span></button>
+          </div>
+          <div class="results-panel" id="contract-results" aria-live="polite">
+            <div class="empty-result"><span>✦</span><strong>Your plain-English review will appear here.</strong><p>We look for fees, renewals, deposits, penalties, and clauses worth negotiating.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="tool-section reveal" id="write-off-hunter" aria-labelledby="write-off-title">
+        <div class="tool-heading">
+          <div><p class="eyebrow">02 · 1099 tax check</p><h2 id="write-off-title">1099 Write-Off Hunter</h2></div>
+          <span class="privacy-note">Schedule C estimate</span>
+        </div>
+        <div class="tool-grid">
+          <div class="tool-panel">
+            <label class="drop-zone compact" data-drop-target="csv-file">
+              <input id="csv-file" type="file" accept=".csv,text/csv">
+              <span class="drop-icon">↑</span>
+              <strong>Drop your bank statement CSV</strong>
+              <span>Date, Description, Amount, Category</span>
+            </label>
+            <button class="text-button" type="button" id="sample-csv">Load Sample US Bank CSV</button>
+            <p class="file-status" id="csv-status" role="status" aria-live="polite">No statement selected.</p>
+            <div class="tax-controls">
+              <label>Federal income tax bracket
+                <select id="tax-rate"><option value="0.12">12%</option><option value="0.22" selected>22%</option><option value="0.24">24%</option><option value="0.32">32%</option><option value="0.35">35%</option></select>
+              </label>
+            </div>
+          </div>
+          <div class="results-panel tax-results" id="tax-results" aria-live="polite">
+            <div class="empty-result"><span>$</span><strong>Your deduction opportunities will appear here.</strong><p>Toggle each transaction between business and personal, then adjust mixed-use costs.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="vault-section reveal" aria-labelledby="vault-title">
+        <div class="tool-heading"><div><p class="eyebrow">Retention engine</p><h2 id="vault-title">Savings &amp; Protection Vault</h2></div><strong class="vault-total" data-vault-total>$0</strong></div>
+        <div class="vault-grid">
+          <div class="vault-card"><span class="vault-card-label">Total potential dollars saved</span><strong data-vault-total>$0</strong><p>Contract fees caught + estimated 1099 tax savings.</p></div>
+          <div class="vault-card"><span class="vault-card-label">Monthly check-in</span><label class="checkin"><input type="checkbox" data-checkin="review-contracts"> <span>Review new contracts and renewals</span></label><label class="checkin"><input type="checkbox" data-checkin="export-expenses"> <span>Export this month’s expense report</span></label><p class="vault-note">Your checklist is saved locally for next month.</p></div>
+          <div class="vault-card"><span class="vault-card-label">Saved reports</span><strong id="saved-report-count">0</strong><p id="saved-report-copy">Your analyzed documents and tax reports appear here.</p></div>
+        </div>
+      </section>
+    </main>
+    <footer class="site-footer"><a class="footer-brand" href="index.html">FlowDoc</a><span>Private tools for everyday financial and legal decisions.</span><a href="index.html">Back home <span aria-hidden="true">↗</span></a></footer>
+  </body>
+</html>
