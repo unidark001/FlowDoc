@@ -26,7 +26,10 @@ const numeric = (value) => {
   const parsed = Number(raw.replace(/[$,\s]/g, "").replace(/^\((.*)\)$/, "-$1"));
   return Number.isFinite(parsed) ? parsed : NaN;
 };
-const findColumn = (headers, type) => headers.findIndex((header) => aliases[type].some((alias) => header === alias || header.includes(alias)));
+const findColumn = (headers, type) => {
+  const exact = headers.findIndex((header) => aliases[type].includes(header));
+  return exact >= 0 ? exact : headers.findIndex((header) => aliases[type].some((alias) => header.includes(alias)));
+};
 
 export const cleanMerchant = (value) => String(value || "Transaction")
   .replace(/\b(?:POS|DEBIT|CREDIT|PURCHASE|CHECKCARD|RECURRING|ONLINE|ACH|VISA|MASTERCARD)\b/gi, "")

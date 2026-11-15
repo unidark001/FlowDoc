@@ -4,13 +4,14 @@ export const LINES = {
   meals: { line: "Line 24b", label: "Deductible Business Meals (50%)", mealCap: true }, utilities: { line: "Line 25", label: "Utilities, Internet & Telecom", mixed: true },
   other: { line: "Line 27a", label: "Other / Professional Services & Contractors" },
 };
+export const TAX_ESTIMATE = Object.freeze({ selfEmploymentRate: 0.153, netEarningsFactor: 0.9235 });
 const rules = [
-  [/meta|facebook ads|google ads|linkedin ads|mailchimp|advertis|promotion/, "advertising"],
+  [/\bmeta\b|facebook ads|google ads|linkedin ads|mailchimp|advertis|promotion/, "advertising"],
   [/adobe|canva|dropbox|figma|notion|github|openai|software|saas|subscription|google workspace|microsoft 365|zoom/, "office"],
   [/office depot|staples|best buy|apple store|apple\.com|equipment|supplies|b&h/, "supplies"],
-  [/delta|united|american air|southwest|airline|hotel|airbnb|marriott|hilton|amtrak|parking|\buber\b|lyft/, "travel"],
-  [/restaurant|doordash|grubhub|uber eats|meal|cafe|coffee|starbucks/, "meals"],
-  [/comcast|xfinity|internet|wi-?fi|at&t|verizon|t-mobile|phone|wireless|utility|electric|water|gas/, "utilities"],
+  [/delta|united|american air|southwest|airline|hotel|airbnb|marriott|hilton|amtrak|parking|\buber\b(?!\s*eats)|lyft/, "travel"],
+  [/restaurant|doordash|grubhub|uber\s*eats|meal|cafe|coffee|starbucks/, "meals"],
+  [/comcast|xfinity|internet|wi-?fi|at&t|verizon|t-mobile|\bphone\b|wireless|utility|\belectric\b|\bwater\b|\bgas\b/, "utilities"],
   [/legal|accounting|cpa|bookkeep|consult|contractor|freelance|upwork|fiverr|stripe fee|paypal fee/, "other"],
 ];
 const personal = /target|walmart|costco|grocery|trader joe|netflix|spotify|personal payment|payment thank you/i;
@@ -22,7 +23,8 @@ export const classifyTransactions = (transactions) => transactions.map((item) =>
   const recurring = key === "office" && /subscription|software|saas|adobe|canva|notion|github|dropbox|figma|zoom/i.test(text);
   const line = key ? LINES[key] : null;
   const isIncome = item.kind === "income" || income.test(text);
-  const confidence = isIncome || personal.test(text) ? "Personal / Non-Deductible" : key ? "High Confidence" : "Needs Review";
+  const needsReview = /\b(?:amazon|walmart|target|uber)\b|\b(?:gas|water|electric)\b/.test(text);
+  const confidence = isIncome ? "Personal / Non-Deductible" : needsReview ? "Needs Review" : personal.test(text) ? "Personal / Non-Deductible" : key ? "High Confidence" : "Needs Review";
   return { ...item, lineKey: key, category: line?.label || "Unclassified", lineNumber: line?.line || "", business: confidence === "High Confidence", confidence, percentage: line?.mixed ? 50 : 100, recurring };
 });
 
@@ -39,7 +41,7 @@ export const calculateScheduleC = (transactions, options = {}) => {
   const transactionDeductible = eligible.reduce((sum, item) => sum + deductibleFor(item), 0);
   const homeOffice = options.homeOffice ? Math.min(300, Math.max(0, Number(options.squareFeet) || 0)) * 5 : 0;
   const deductible = transactionDeductible + homeOffice;
-  const seSavings = deductible * 0.9235 * 0.153;
+  const seSavings = deductible * TAX_ESTIMATE.netEarningsFactor * TAX_ESTIMATE.selfEmploymentRate;
   const federalSavings = deductible * bracket;
   const qbiSavings = options.qbi ? deductible * 0.2 * bracket : 0;
   const incomeTotal = transactions.filter((item) => item.kind === "income" || income.test(`${item.description} ${item.rawDescription || ""}`)).reduce((sum, item) => sum + item.amount, 0);

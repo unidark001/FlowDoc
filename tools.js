@@ -1,4 +1,4 @@
-import { analyzeContract, makeCounterScript, normalizeDocumentText, preprocessOcrCanvas, stripRepeatedPageChrome } from "./src/utils/contractAnalyzer.js";
+import { analyzeContract, makeCounterScript, maskPersonalData, normalizeDocumentText, preprocessOcrCanvas, stripRepeatedPageChrome } from "./src/utils/contractAnalyzer.js";
 import { normalizeBankCsv } from "./src/utils/csvNormalizer.js";
 import { classifyTransactions, calculateScheduleC, detectRecurringSaas } from "./src/utils/scheduleCEngine.js";
 import { requestStructuredAudit } from "./src/services/aiClient.js";
@@ -95,7 +95,7 @@ $("#audit-contract").addEventListener("click", async () => {
   const deterministic = analyzeContract(text);
   if (!$("#use-ai").checked) { renderContract(deterministic, "local"); setStatus("#contract-status", "Deterministic audit complete.", "success"); reveal(contractResults); return; }
   auditController?.abort(); auditController = new AbortController(); const button = $("#audit-contract"); button.disabled = true; button.querySelector("span").textContent = "Reviewing…";
-  try { const payload = await requestStructuredAudit(text, auditController.signal); renderContract(mergedAudit(deterministic, payload.analysis), "ai", payload.truncated ? "AI reviewed the first portion; deterministic metrics use the complete text." : ""); setStatus("#contract-status", "Deep audit complete.", "success"); }
+  try { const payload = await requestStructuredAudit(maskPersonalData(text), auditController.signal); renderContract(mergedAudit(deterministic, payload.analysis), "ai", payload.truncated ? "AI reviewed the first portion; deterministic metrics use the complete text." : "Personal identifiers were removed before sending text to the AI."); setStatus("#contract-status", "Deep audit complete. Personal identifiers were redacted before sending.", "success"); }
   catch (error) { if (error.name !== "AbortError") { renderContract(deterministic, "local", "AI review unavailable: " + error.message + ". The full on-device audit is shown."); setStatus("#contract-status", "On-device audit complete; AI was unavailable.", "error"); } }
   finally { button.disabled = false; button.querySelector("span").textContent = "Audit document"; } reveal(contractResults);
 });

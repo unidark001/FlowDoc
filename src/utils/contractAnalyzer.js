@@ -3,10 +3,23 @@ const moneyPattern = /\$\s?(\d[\d,]*(?:\.\d{1,2})?)/g;
 const clean = (value) => String(value || "").replace(/\s+/g, " ").trim();
 const dollars = (value) => Number(String(value || "").replace(/[^\d.]/g, "")) || 0;
 const uid = (title, index) => `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${index}`;
+export const TAX_ESTIMATE = { selfEmploymentRate: 0.153, netEarningsFactor: 0.9235 };
 
-export const normalizeDocumentText = (text) => clean(text)
-  .replace(/([a-z,;:])\s*\n\s*([a-z])/gi, "$1 $2")
-  .replace(/\s*\[Page\s+(\d+)\]\s*/gi, "\n\n[Page $1]\n");
+export const normalizeDocumentText = (text) => String(text || "")
+  .replace(/\r\n?/g, "\n")
+  .split("\n")
+  .map((line) => line.replace(/[ \t]+/g, " ").trim())
+  .join("\n")
+  .replace(/([a-z,;:])\n(?=[a-z])/gi, "$1 ")
+  .replace(/\n{3,}/g, "\n\n")
+  .replace(/\s*\[Page\s+(\d+)\]\s*/gi, "\n\n[Page $1]\n")
+  .trim();
+
+export const maskPersonalData = (text) => String(text || "")
+  .replace(/\b\d{3}-\d{2}-\d{4}\b/g, "[SSN REDACTED]")
+  .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "[EMAIL REDACTED]")
+  .replace(/\b(?:\+?1[\s.-]?)?(?:\(\d{3}\)|\d{3})[\s.-]\d{3}[\s.-]\d{4}\b/g, "[PHONE REDACTED]")
+  .replace(/\b(?:account|acct|routing)[\s:#-]*\d{4,17}\b/gi, "[ACCOUNT NUMBER REDACTED]");
 
 // PDFs often repeat a title or page number in their top/bottom lines. Remove only lines
 // repeated on 3+ pages, never text in the middle of a page.
@@ -83,6 +96,14 @@ const RULES = [
   [/\b(?:sole\s+discretion|may\s+change|unilaterally\s+change)\b/i, { severity: "Medium", title: "One-sided change right", whyItHurts: "The other party may be able to change price or obligations without your agreement.", proposedCounterClause: "Material fees and obligations may change only by a written amendment signed by both parties." }],
   [/\b(?:tenant|customer|resident)\s+(?:is|shall be)\s+responsible\s+for[^.]{0,110}(?:repair|maintenance)/i, { severity: "High", title: "Repair costs shifted to you", whyItHurts: "The clause may make you pay even when you did not cause the problem.", proposedCounterClause: "Tenant is responsible only for damage caused by Tenant, occupants, or guests; ordinary maintenance remains the owner's responsibility." }],
   [/\battorney(?:'s|s)?\s+fees?/i, { severity: "Low", title: "Attorney-fee exposure", whyItHurts: "A one-way fee clause can make a small dispute expensive.", proposedCounterClause: "Attorney fees may be awarded only as permitted by applicable law and on an equal basis to the prevailing party." }],
+  [/\bnet[-\s]?(?:60|90)\b|\b(?:60|90)[-\s]?day(?:s)?\s+(?:payment|terms?)\b/i, { severity: "High", title: "Slow client payment terms", whyItHurts: "Waiting 60 or 90 days shifts the client's cash-flow burden to you after work is delivered.", proposedCounterClause: "Invoices are payable within 30 days. Work may pause on overdue balances without penalty." }],
+  [/(?:(?:assign|assignment|transfer)\b[^.]{0,100}\b(?:all|any)\b[^.]{0,80}\b(?:intellectual property|ip|rights)|\b(?:all|any)\s+(?:intellectual property|ip|rights)\b[^.]{0,100}\b(?:assign|assignment|transfer))/i, { severity: "High", title: "IP assigned before payment", whyItHurts: "You may give up ownership of your work before receiving the money owed.", proposedCounterClause: "Rights transfer only after full payment of all undisputed invoices; you retain pre-existing tools and know-how." }],
+  [/\bunlimited\s+(?:revisions|rounds|changes)\b/i, { severity: "Medium", title: "Unlimited revisions", whyItHurts: "Open-ended revisions can turn a fixed-price project into unlimited unpaid labor.", proposedCounterClause: "The fee includes two revision rounds. Additional revisions are billed at the agreed hourly rate." }],
+  [/\bnon[-\s]?(?:compete|solicit|solicitation)\b/i, { severity: "Medium", title: "Restrictive client covenant", whyItHurts: "A broad restriction may limit which clients, industries, or projects you can accept next.", proposedCounterClause: "Any restriction is limited to named clients, a narrow scope, and the shortest period permitted by applicable law." }],
+  [/\b(?:kill\s+fee|early\s+termination|terminate|termination)\b[^.]{0,100}\b(?:fee|penalty|charge)\b/i, { severity: "High", title: "Termination fee", whyItHurts: "The clause may penalize you or leave payment unclear if the client ends the project early.", proposedCounterClause: "Client may terminate on written notice and will pay for completed work, committed costs, and a clearly stated kill fee." }],
+  [/\b(?:scope\s+creep|out\s+of\s+scope|additional\s+work)\b/i, { severity: "Medium", title: "Scope-change risk", whyItHurts: "New requests may be treated as included without a written change order or additional fee.", proposedCounterClause: "Work outside the statement of work requires a written change order with timing and pricing approved by both parties." }],
+  [/\bindemnif(?:y|ication)\b[^.]{0,160}\b(?:all|any|loss|claim|damage)/i, { severity: "High", title: "Broad indemnification", whyItHurts: "A one-sided indemnity can make you responsible for claims beyond your control or the value of the project.", proposedCounterClause: "Each party indemnifies the other only for its own negligence, willful misconduct, or breach, subject to a reasonable cap." }],
+  [/\blate[-\s]payment\s+interest\b|\binterest\b[^.]{0,60}\boverdue\b/i, { severity: "Low", title: "No clear late-payment remedy", whyItHurts: "Without a clear remedy, late invoices can remain unpaid while your cost of financing the work increases.", proposedCounterClause: "Past-due undisputed balances accrue interest at the lesser of 1% per month or the maximum lawful rate." }],
 ];
 
 export const analyzeContract = (rawText) => {
@@ -90,9 +111,12 @@ export const analyzeContract = (rawText) => {
   const flags = RULES.map(([pattern, detail]) => flag(terms.text, pattern, detail)).filter(Boolean);
   const renewalNotice = terms.noticeWindows.find((window) => /renew|notice/i.test(window.quote));
   if (renewalNotice?.days > 30) flags.push({ severity: "High", title: "Long renewal notice window", financialImpactDollars: terms.baseRent, verbatimQuote: renewalNotice.quote, whyItHurts: `A ${renewalNotice.days}-day deadline is easy to miss and can trigger another term.`, proposedCounterClause: "Notice to decline renewal may be delivered up to 30 days before the term ends." });
-  const texas = /\btexas\b|\btx\b/i.test(terms.text);
+  const stateRules = {
+    texas: { pattern: /\btexas\b|\btx\b/i, depositTitle: "Texas deposit-return deadline is not stated", depositWhy: "Texas generally requires a security-deposit accounting and return within 30 days after surrender and a forwarding address.", depositClause: "The security deposit will be accounted for and returned as required by Texas Property Code § 92.103." },
+  };
+  const state = Object.entries(stateRules).find(([, rule]) => rule.pattern.test(terms.text));
   const deposit = terms.amounts.find((amount) => /security\s+deposit/i.test(amount.quote));
-  if (texas && deposit && !/30\s+days?[^.]{0,80}(?:return|refund|itemized)/i.test(terms.text)) flags.push({ severity: "Medium", title: "Texas deposit-return deadline is not stated", financialImpactDollars: deposit.value, verbatimQuote: deposit.quote, whyItHurts: "Texas generally requires a security-deposit accounting and return within 30 days after surrender and a forwarding address; the agreement should not imply a longer period.", proposedCounterClause: "The security deposit will be accounted for and returned as required by Texas Property Code § 92.103." });
+  if (state && deposit && !/30\s+days?[^.]{0,80}(?:return|refund|itemized)/i.test(terms.text)) flags.push({ severity: "Medium", title: state[1].depositTitle, financialImpactDollars: deposit.value, verbatimQuote: deposit.quote, whyItHurts: state[1].depositWhy, proposedCounterClause: state[1].depositClause });
   const nonRefundable = terms.nonRefundable[0];
   if (nonRefundable) flags.push({ severity: "Medium", title: "Non-refundable charge", financialImpactDollars: nonRefundable.value, verbatimQuote: nonRefundable.quote, whyItHurts: "This fee may be lost even if no corresponding service or damage occurs.", proposedCounterClause: "Any move-in fee must be itemized, reasonable, and refundable to the extent no documented cost is incurred." });
   const late = terms.amounts.find((amount) => /late\s+(?:fee|charge)/i.test(amount.quote));
@@ -110,6 +134,7 @@ export const analyzeContract = (rawText) => {
       `Deterministic score: ${riskScore}/100 from ${redFlags.length} document-specific issue${redFlags.length === 1 ? "" : "s"}.`,
       terms.baseRent ? `True first-year cost is ${trueAnnualizedCost.toLocaleString("en-US", { style: "currency", currency: "USD" })} versus ${ (terms.baseRent * 12).toLocaleString("en-US", { style: "currency", currency: "USD" })} headline annual rent.` : "No clearly labeled base rent was extracted.",
       terms.caps.length ? `${terms.caps.length} liability cap${terms.caps.length === 1 ? "" : "s"} extracted for review.` : "Confirm that all liability limits and exclusions are acceptable.",
+      state ? `State-specific screening used ${state[0]} rules; confirm the result with a local professional.` : "State-specific rules were not applied; confirm local law with a qualified professional.",
     ],
   };
 };
