@@ -286,16 +286,18 @@ const requestUpstreamAnalysis = async (text) => {
   if (!upstream.ok) {
     // Log details server-side; don't forward provider internals to the browser.
     console.error(`Upstream AI error ${upstream.status}:`, body.error?.message || body);
-    throw Object.assign(new Error(upstream.status === 429 ? "The AI provider is rate limiting requests. Try again shortly." : "The AI provider rejected the request."), { status: 502 });
+    const detail = upstream.status === 429 ? "The AI provider is rate limiting requests. Try again shortly." : `The AI provider rejected the request (HTTP ${upstream.status}). Check the API key and model.`;
+    throw Object.assign(new Error(detail), { status: 502 });
   }
   let parsed = null;
   try {
-    parsed = JSON.parse(body.choices?.[0]?.message?.content ?? "");
+    parsed = JSON.parse(String(body.choices?.[0]?.message?.content ?? "").replace(/^```(?:json)?\s*|\s*```$/g, ""));
   } catch {
     // handled below
   }
   const analysis = normalizeAnalysis(parsed);
   if (!analysis) throw Object.assign(new Error("The AI returned an unexpected analysis shape."), { status: 502 });
+  analysis.redFlags = analysis.redFlags.filter((flag) => flag.verbatimQuote && text.includes(flag.verbatimQuote));
   return analysis;
 };
 
