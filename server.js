@@ -69,6 +69,7 @@ const securityHeaders = {
   "Referrer-Policy": "strict-origin-when-cross-origin",
   "X-Frame-Options": "DENY",
   "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+  "Content-Security-Policy": "default-src 'self'; connect-src 'self' https://*.supabase.co https://api.stripe.com; script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; worker-src 'self' blob:; frame-src https://checkout.stripe.com https://billing.stripe.com; base-uri 'self'; form-action 'self' https://checkout.stripe.com",
 };
 
 const send = (response, status, body, type = "text/plain; charset=utf-8", extraHeaders = {}) => {
@@ -310,6 +311,17 @@ const stripeRequest = async (endpoint, params) => fetch(`https://api.stripe.com/
   headers: { Authorization: `Bearer ${config.stripeSecretKey}`, "Content-Type": "application/x-www-form-urlencoded" },
   body: new URLSearchParams(params),
 });
+const claimStripeEvent = async (eventId) => {
+  if (!eventId) return false;
+  const response = await supabaseRequest("/rest/v1/stripe_events", {
+    method: "POST",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ id: eventId }),
+  });
+  if (response.ok) return true;
+  if (response.status === 409) return false;
+  throw Object.assign(new Error("Unable to record webhook event."), { status: 502 });
+};
 const requireConfiguredUser = async (request, response) => {
   if (!authConfigured()) return { id: "demo-user", email: "demo@flowdoc.local" };
   const user = await getUser(request);
@@ -367,9 +379,12 @@ const handleStripeWebhook = async (request, response) => {
     const raw = await readRawBody(request);
     if (!verifyStripeSignature(raw.toString("utf8"), request.headers["stripe-signature"], config.stripeWebhookSecret)) return sendJson(response, 400, { error: "Invalid Stripe signature." });
     const event = JSON.parse(raw.toString("utf8"));
+    if (!(await claimStripeEvent(event.id))) return sendJson(response, 200, { received: true, duplicate: true });
     const object = event.data?.object || {};
     if (event.type === "checkout.session.completed" && object.client_reference_id) {
-      await supabaseRequest(`/rest/v1/profiles?id=eq.${encodeURIComponent(object.client_reference_id)}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ plan: "personal", stripe_customer_id: object.customer }) });
+      const profile = await supabaseRequest(`/rest/v1/profiles?id=eq.${encodeURIComponent(object.client_reference_id)}&select=id`);
+      const rows = profile.ok ? await profile.json() : [];
+      if (rows.length) await supabaseRequest(`/rest/v1/profiles?id=eq.${encodeURIComponent(object.client_reference_id)}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ plan: "personal", stripe_customer_id: object.customer }) });
     } else if (["customer.subscription.deleted", "customer.subscription.updated"].includes(event.type) && object.customer) {
       const active = ["active", "trialing"].includes(object.status);
       await supabaseRequest(`/rest/v1/profiles?stripe_customer_id=eq.${encodeURIComponent(object.customer)}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ plan: active ? "personal" : "free" }) });
@@ -396,6 +411,12 @@ const analyzeContract = async (request, response) => {
     }
     const text = fullText.slice(0, MAX_AI_CHARS);
     const truncated = fullText.length > MAX_AI_CHARS;
+    // Availability is checked before quota mutation: unavailable AI must never
+    // use a customer's limited check.
+    if (!config.mock && !config.apiKey) {
+      sendJson(response, 503, { error: "AI is not configured on this server. Local review is still available." });
+      return;
+    }
     const charged = authConfigured() ? await consumeCheck(user.id) : false;
     if (authConfigured() && !charged) {
       sendJson(response, 402, { error: "Your free checks are used. Choose a paid plan to continue." });
@@ -404,10 +425,6 @@ const analyzeContract = async (request, response) => {
 
     if (config.mock) {
       sendJson(response, 200, { mode: "mock", truncated, analysis: normalizeAnalysis(createMockAnalysis(text)) });
-      return;
-    }
-    if (!config.apiKey) {
-      sendJson(response, 503, { error: "AI is not configured on this server." });
       return;
     }
     const analysis = await requestUpstreamAnalysis(text);

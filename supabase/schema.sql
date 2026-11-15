@@ -7,6 +7,15 @@ create table if not exists public.profiles (
   updated_at timestamptz not null default now()
 );
 
+-- Stripe event IDs are stored only by the server service role so retries cannot
+-- apply account changes more than once. Never expose SUPABASE_SERVICE_KEY.
+create table if not exists public.stripe_events (
+  id text primary key,
+  created_at timestamptz not null default now()
+);
+
+alter table public.stripe_events enable row level security;
+
 alter table public.profiles enable row level security;
 
 create or replace function public.handle_new_user()
