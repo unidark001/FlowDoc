@@ -358,6 +358,7 @@ main {
 }
 
 .shiny-text {
+  position: relative;
   color: #b5b5b5;
 }
 
