@@ -45,7 +45,8 @@ const config = {
 const MAX_BODY_BYTES = 1_500_000;
 // ~15k tokens: comfortably inside small-model context windows and keeps cost predictable.
 const MAX_AI_CHARS = 60_000;
-const UPSTREAM_TIMEOUT_MS = 45_000;
+const UPSTREAM_TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS || 45_000);
+const AI_MAX_TOKENS = Number(process.env.AI_MAX_TOKENS || 5000);
 const RATE_LIMIT = { windowMs: 60_000, max: 10 };
 
 /* ---------- Static files ---------- */
@@ -206,33 +207,39 @@ const SEVERITIES = ["High", "Medium", "Low"];
 const asText = (value, max = 600) => (typeof value === "string" ? value.trim().slice(0, max) : "");
 
 // Never trust model output shape: coerce every field to what the client renders.
-const normalizeAnalysis = (raw) => {
+const normalizeAnalysis = (raw, sourceText = "") => {
   if (!raw || typeof raw !== "object") return null;
   const summary = (Array.isArray(raw.summary) ? raw.summary : []).map((item) => asText(item)).filter(Boolean).slice(0, 6);
   const redFlags = (Array.isArray(raw.redFlags) ? raw.redFlags : [])
     .filter((flag) => flag && typeof flag === "object")
     .map((flag, index) => ({
       id: asText(flag.id, 80) || "flag-" + index,
+      category: ["payment", "fees", "scope", "term", "termination", "ip", "restrictions", "liability", "disputes", "changes", "missing"].includes(flag.category) ? flag.category : "missing",
       severity: SEVERITIES.includes(flag.severity) ? flag.severity : "Low",
       title: asText(flag.title, 120) || "Review this clause",
       financialImpactDollars: Number.isFinite(Number(flag.financialImpactDollars)) && Number(flag.financialImpactDollars) >= 0 ? Math.round(Number(flag.financialImpactDollars) * 100) / 100 : 0,
-      verbatimQuote: asText(flag.verbatimQuote, 700),
+      verbatimQuote: asText(flag.verbatimQuote, 200),
       whyItHurts: asText(flag.whyItHurts || flag.why) || "Ask a qualified professional to review this language.",
       proposedCounterClause: asText(flag.proposedCounterClause, 800) || "Please clarify or revise this clause in writing.",
     }))
-    .slice(0, 12);
+    .slice(0, 10)
+    .map((flag) => ({ ...flag, unverified: Boolean(flag.verbatimQuote && sourceText && !sourceText.replace(/\s+/g, " ").toLowerCase().includes(flag.verbatimQuote.replace(/\s+/g, " ").toLowerCase())) }));
   const obligations = (Array.isArray(raw.obligations) ? raw.obligations : [])
     .filter((item) => item && typeof item === "object")
     .map((item) => ({ amount: asText(String(item.amount ?? ""), 40), description: asText(item.description, 240), note: asText(item.note, 240) }))
     .slice(0, 20);
   if (!summary.length && !redFlags.length) return null;
-  const caught = Number(raw.potentialCaughtDollars);
+  const potentialCaughtDollars = redFlags.reduce((sum, flag) => sum + flag.financialImpactDollars, 0);
+  const riskLevel = SEVERITIES.includes(raw.riskLevel) ? raw.riskLevel : (redFlags.some((flag) => flag.severity === "High") ? "High" : redFlags.some((flag) => flag.severity === "Medium") ? "Medium" : "Low");
   return {
+    riskLevel: redFlags.some((item) => item.severity === "High") ? "High" : "Medium",
     summary,
     redFlags,
     obligations,
     counterScript: asText(raw.counterScript, 4000),
-    potentialCaughtDollars: Number.isFinite(caught) && caught >= 0 ? Math.round(caught * 100) / 100 : 0,
+    riskLevel,
+    keyDates: (Array.isArray(raw.keyDates) ? raw.keyDates : []).slice(0, 5).map((item) => ({ label: asText(item?.label, 100), text: asText(item?.text, 200) })).filter((item) => item.label || item.text),
+    potentialCaughtDollars: Math.round(potentialCaughtDollars * 100) / 100,
   };
 };
 
@@ -251,55 +258,77 @@ const createMockAnalysis = (text) => {
       redFlags.length ? `${redFlags.length} common clause risk${redFlags.length === 1 ? "" : "s"} matched the sample rules.` : "No mock red-flag rules matched this text.",
     ],
     obligations: amounts.map((amount) => ({ amount: `$${amount.toFixed(2)}`, description: "Dollar amount found in the document", note: "Mock extraction; verify against the original." })),
-    redFlags: redFlags.length ? redFlags : [{ severity: "Low", title: "No mock rule matched", why: "A real model or professional review may still identify context-specific issues." }],
+    redFlags: redFlags.length ? redFlags.map((item, index) => ({ id: `mock-${index}`, category: index === 0 ? "term" : index === 1 ? "fees" : "payment", ...item, verbatimQuote: "", proposedCounterClause: "Please clarify this term in writing.", financialImpactDollars: 0 })).concat([{ id: "mock-missing", category: "missing", severity: "Low", title: "Late-payment terms may be missing", verbatimQuote: "", whyItHurts: "Payment timing can be unclear.", proposedCounterClause: "Add a payment deadline and late interest term.", financialImpactDollars: 0 }]) : [{ id: "mock-missing", category: "missing", severity: "Low", title: "Payment terms need review", verbatimQuote: "", whyItHurts: "Confirm when payment is due.", proposedCounterClause: "Add a payment deadline.", financialImpactDollars: 0 }],
+    keyDates: [{ label: "other", text: "Review notice and payment dates in the document." }],
     counterScript: "Subject: Questions about the agreement\n\nHi,\n\nI would like to clarify the fees, deadlines, and renewal terms before signing. Please send a revised copy with each obligation stated plainly.\n\nThank you,\n[Your name]",
     potentialCaughtDollars: 0,
   };
 };
 
-const SYSTEM_PROMPT = `You are FlowDoc AI, a careful US consumer-protection document reviewer. Analyze only the supplied document. Do not invent facts or claim an outcome is definitely illegal. Use natural American English and explain risks plainly.
-Return ONLY valid JSON with exactly these keys:
-For each red flag, verbatimQuote must be an exact contiguous substring copied from the supplied document. Omit an issue if an exact quote cannot support it, and use 0 when no dollar impact can be calculated.
-- summary: array of 3-4 concise strings
-- obligations: array of objects { amount, description, note }
-- redFlags: array of objects { id, severity: "High" | "Medium" | "Low", title, financialImpactDollars, verbatimQuote, whyItHurts, proposedCounterClause }
-- counterScript: a practical, copyable email string
-- potentialCaughtDollars: number
-Identify dollar amounts, late fees, deposits, auto-renewals, penalties, arbitration or class-action waivers, unilateral changes, and one-sided legal terms. potentialCaughtDollars must be the sum of clearly stated avoidable fees or penalties, not rent, deposits, insurance limits, or ordinary purchase prices. Mention when a professional in the relevant state should review the clause.`;
+const SYSTEM_PROMPT = `You are FlowDoc, a careful reviewer of US consumer and freelancer contracts. Analyze ONLY the supplied text. Never invent facts, never say something is definitely illegal, and recommend a licensed attorney in the relevant state for legal conclusions. Plain American English.
+
+Check only present issues: payment (slow/conditional payment, non-refundable fees); fees (late, setup, recurring, price-change); scope (unlimited revisions, unpaid work, vague deliverables); term (auto-renewal, long notice, lock-in); termination (one-sided, kill fee, unpaid work); ip (assignment before payment, no portfolio rights); restrictions (non-compete, non-solicit, exclusivity, indefinite confidentiality); liability (one-sided indemnity/caps/cost shifts); disputes (arbitration, waivers, venue); changes (sole-discretion amendments); missing (payment deadline, late interest, termination notice, revision limit).
+
+Rules: quote exact contiguous text, max 200 characters; omit unsupported issues except missing uses quote "". High/Medium/Low order, max 10, one per issue. Dollar impact only directly stated fee/penalty, never rent/base price/ordinary deposit. Sum flag impacts. Strings under 280 characters. Return ONLY JSON:
+{"riskLevel":"High|Medium|Low","summary":[""],"obligations":[{"amount":"","description":"","note":""}],"redFlags":[{"id":"","category":"payment|fees|scope|term|termination|ip|restrictions|liability|disputes|changes|missing","severity":"High|Medium|Low","title":"","verbatimQuote":"","whyItHurts":"","proposedCounterClause":"","financialImpactDollars":0}],"keyDates":[{"label":"","text":""}],"counterScript":"","potentialCaughtDollars":0}`;
+
+const extractJson = (value) => {
+  const raw = String(value || "").trim().replace(/^```(?:json)?\s*|\s*```$/g, "");
+  try { return JSON.parse(raw); } catch {}
+  const start = raw.indexOf("{");
+  const end = raw.lastIndexOf("}");
+  if (start >= 0 && end > start) {
+    try { return JSON.parse(raw.slice(start, end + 1)); } catch {}
+  }
+  return null;
+};
 
 const requestUpstreamAnalysis = async (text) => {
-  const upstream = await fetch(`${config.baseUrl}/chat/completions`, {
+  const call = (jsonMode) => fetch(`${config.baseUrl}/chat/completions`, {
     method: "POST",
     signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` },
     body: JSON.stringify({
       model: config.model,
       temperature: 0.1,
-      response_format: { type: "json_object" },
+      max_tokens: AI_MAX_TOKENS,
+      ...(jsonMode ? { response_format: { type: "json_object" } } : {}),
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: text },
+        { role: "user", content: `Document text:\n\"\"\"\n${text}\n\"\"\"${jsonMode ? "" : "\nReturn only the JSON object."}` },
       ],
     }),
   });
-  const body = await upstream.json().catch(() => ({}));
-  if (!upstream.ok) {
-    // Log details server-side; don't forward provider internals to the browser.
-    console.error(`Upstream AI error ${upstream.status}:`, body.error?.message || body);
-    const detail = upstream.status === 429 ? "The AI provider is rate limiting requests. Try again shortly." : `The AI provider rejected the request (HTTP ${upstream.status}). Check the API key and model.`;
-    throw Object.assign(new Error(detail), { status: 502 });
-  }
+
+  let upstream = await call(true);
+  let body = await upstream.json().catch(() => ({}));
   let parsed = null;
-  try {
-    parsed = JSON.parse(String(body.choices?.[0]?.message?.content ?? "").replace(/^```(?:json)?\s*|\s*```$/g, ""));
-  } catch {
-    // handled below
+
+  if (upstream.ok) {
+    parsed = extractJson(body.choices?.[0]?.message?.content);
+  } else if (upstream.status === 400) {
+    // Groq returns the unfinished text in error.failed_generation: try to salvage it.
+    parsed = extractJson(body.error?.failed_generation);
+    if (!parsed) {
+      upstream = await call(false);
+      body = await upstream.json().catch(() => ({}));
+      if (upstream.ok) parsed = extractJson(body.choices?.[0]?.message?.content);
+    }
   }
-  const analysis = normalizeAnalysis(parsed);
+
+  if (!parsed && !upstream.ok) {
+    console.error(`Upstream AI error ${upstream.status}:`, body.error?.message || body);
+    const hint = upstream.status === 401 ? "Check the API key."
+      : upstream.status === 404 ? "Check the model name and base URL."
+      : upstream.status === 429 ? "Rate limit or quota reached."
+      : "Try a shorter text or another model.";
+    throw Object.assign(new Error(`The AI provider rejected the request (HTTP ${upstream.status}). ${hint}`), { status: 502 });
+  }
+
+  const analysis = normalizeAnalysis(parsed, text);
   if (!analysis) throw Object.assign(new Error("The AI returned an unexpected analysis shape."), { status: 502 });
-  analysis.redFlags = analysis.redFlags.filter((flag) => flag.verbatimQuote && text.includes(flag.verbatimQuote));
   return analysis;
-};
+};;
 
 const verifyStripeSignature = (rawBody, signature, secret, now = Math.floor(Date.now() / 1000)) => {
   const parts = Object.fromEntries(String(signature || "").split(",").map((part) => part.split("=", 2)));
