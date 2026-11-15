@@ -19,6 +19,28 @@ const setStatus = (selector, value, tone = "") => { const node = $(selector); if
 const reveal = (panel) => { panel?.focus({ preventScroll: true }); if (matchMedia("(max-width: 900px)").matches) panel?.scrollIntoView({ behavior: "smooth", block: "start" }); };
 
 const STORAGE_KEY = "flowdoc-vault";
+const accountStatus = document.querySelector("#account-status");
+const loadAccountStatus = async () => {
+  const token = localStorage.getItem("flowdoc_access_token");
+  if (!token || !accountStatus) return;
+  const response = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` } });
+  const account = await response.json().catch(() => ({}));
+  if (!response.ok || !account.user) return;
+  accountStatus.hidden = false;
+  const checks = account.remainingChecks === null ? "Unlimited AI checks" : `${account.remainingChecks} AI checks remaining`;
+  accountStatus.textContent = `${account.plan === "personal" ? "Personal" : "Free"} · ${checks}`;
+  const button = document.createElement("button");
+  button.className = "text-button";
+  button.textContent = account.plan === "personal" ? "Manage billing" : "Upgrade";
+  button.addEventListener("click", async () => {
+    if (account.plan !== "personal") { window.location.href = "pricing.html"; return; }
+    const portal = await fetch("/api/billing-portal", { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+    const payload = await portal.json().catch(() => ({}));
+    if (portal.ok && payload.url) window.location.href = payload.url;
+  });
+  accountStatus.append(" ", button);
+};
+void loadAccountStatus();
 const emptyVault = () => ({ contractSavings: 0, taxSavings: 0, reports: [], checkins: {} });
 let vault; try { vault = { ...emptyVault(), ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") }; } catch { vault = emptyVault(); }
 const saveReport = (type, label, savings) => { vault.reports = [...vault.reports.filter((item) => item.type !== type), { type, label, savings, date: new Date().toISOString() }]; };

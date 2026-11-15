@@ -80,6 +80,29 @@ if (oauthHash.get("access_token")) {
   history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
 }
 
+const updateAuthHeader = async () => {
+  const config = await publicConfig;
+  const links = document.querySelectorAll(".nav-sign-in, .menu-secondary");
+  if (!config.auth) return;
+  const session = await refreshSession(config);
+  if (!session?.access_token) return;
+  const response = await fetch("/api/me", { headers: { Authorization: `Bearer ${session.access_token}` } });
+  const account = await response.json().catch(() => ({}));
+  if (!response.ok || !account.user) return;
+  links.forEach((link) => { link.textContent = account.user.email; link.href = "tools.html"; });
+  document.querySelectorAll(".nav-actions").forEach((actions) => {
+    if (actions.querySelector("[data-sign-out]")) return;
+    const button = document.createElement("button");
+    button.className = "text-button"; button.dataset.signOut = ""; button.textContent = "Sign out";
+    button.addEventListener("click", async () => {
+      await fetch(`${config.supabaseUrl}/auth/v1/logout`, { method: "POST", headers: { apikey: config.supabaseAnonKey, Authorization: `Bearer ${session.access_token}` } }).catch(() => {});
+      authStore.clear(); window.location.href = "index.html";
+    });
+    actions.append(button);
+  });
+};
+void updateAuthHeader();
+
 const menuToggle = document.querySelector(".menu-toggle");
 const siteMenu = document.querySelector("#site-menu");
 
