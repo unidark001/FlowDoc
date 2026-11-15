@@ -259,7 +259,7 @@ if (signInForm) {
     input.addEventListener("input", () => { if (input.getAttribute("aria-invalid") === "true") validateField(input); });
   });
 
-  signInForm.addEventListener("submit", (event) => {
+  signInForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const inputs = [...signInForm.querySelectorAll("input")];
     const invalid = inputs.filter((input) => !validateField(input));
@@ -267,13 +267,41 @@ if (signInForm) {
       invalid[0].focus();
       return;
     }
-    if (authFeedback) authFeedback.textContent = "Accounts are coming soon. You can use every tool without signing in.";
+    if (authFeedback) authFeedback.textContent = "Signing you in…";
+    try {
+      const config = await fetch("/api/config").then((response) => response.json());
+      if (!config.auth) {
+        if (authFeedback) authFeedback.textContent = "Demo mode is active. You can use every tool without signing in.";
+        return;
+      }
+      const response = await fetch(`${config.supabaseUrl}/auth/v1/token?grant_type=password`, {
+        method: "POST",
+        headers: { apikey: config.supabaseAnonKey, "Content-Type": "application/json" },
+        body: JSON.stringify({ email: inputs[0].value.trim(), password: inputs[1].value }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.access_token) throw new Error(result.error_description || "The email or password was not accepted.");
+      localStorage.setItem("flowdoc_access_token", result.access_token);
+      window.location.href = "tools.html";
+    } catch (error) {
+      if (authFeedback) authFeedback.textContent = error.message || "Sign-in failed. Try again.";
+    }
   });
 }
 
 document.querySelectorAll("[data-auth-provider]").forEach((button) => {
-  button.addEventListener("click", () => {
-    if (authFeedback) authFeedback.textContent = `${button.dataset.authProvider} sign-in is coming soon. You can use every tool without an account.`;
+  button.addEventListener("click", async () => {
+    try {
+      const config = await fetch("/api/config").then((response) => response.json());
+      if (!config.auth) {
+        if (authFeedback) authFeedback.textContent = "Demo mode is active. You can use every tool without signing in.";
+        return;
+      }
+      const provider = button.dataset.authProvider.toLowerCase();
+      window.location.href = `${config.supabaseUrl}/auth/v1/authorize?provider=${encodeURIComponent(provider)}&redirect_to=${encodeURIComponent(window.location.origin + "/tools.html")}`;
+    } catch {
+      if (authFeedback) authFeedback.textContent = "Unable to start provider sign-in.";
+    }
   });
 });
 

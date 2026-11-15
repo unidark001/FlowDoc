@@ -3,6 +3,12 @@ import { normalizeBankCsv } from "./src/utils/csvNormalizer.js";
 import { classifyTransactions, calculateScheduleC, detectRecurringSaas } from "./src/utils/scheduleCEngine.js";
 import { requestStructuredAudit } from "./src/services/aiClient.js";
 
+const authHash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+if (authHash.get("access_token")) {
+  localStorage.setItem("flowdoc_access_token", authHash.get("access_token"));
+  history.replaceState(null, "", window.location.pathname + window.location.search);
+}
+
 const SAMPLE_LEASE = "RESIDENTIAL LEASE AGREEMENT\nMonthly rent is $2,150. A late fee of $125 applies after the third day. Tenant will pay a $2,150 security deposit and a non-refundable $350 move-in fee. Tenant pays a $65 monthly amenity fee. Unless Tenant provides written notice 60 days before the end date, this lease automatically renews for another 12-month term. Tenant is responsible for the first $200 of every repair call, including repairs not caused by Tenant. Tenant waives class-action rights, agrees to binding arbitration, and agrees to pay Landlord's attorney fees.";
 const SAMPLE_CSV = "Transaction Date,Description,Amount\n2025-10-01,POS COMCAST INTERNET KANSAS CITY MO,-119.99\n2025-10-02,Client payment Studio North,2400.00\n2025-10-03,ADOBE*294810 SAN JOSE CA,-59.99\n2025-10-05,Trader Joe's,-86.42\n2025-10-07,UBER TRIP,-42.80\n2025-10-10,APPLE.COM/BILL,-249.00\n2025-10-12,STARBUCKS STORE #0419,-18.75\n2025-10-15,DELTA AIR LINES,-386.40\n2025-10-18,AT&T WIRELESS,-92.00\n2025-10-22,UBER EATS,-31.40\n2025-10-25,CANVA PRO,-15.00\n2025-11-03,ADOBE*294811 SAN JOSE CA,-59.99\n2025-11-25,CANVA PRO,-15.00";
 const $ = (selector, scope = document) => scope.querySelector(selector);

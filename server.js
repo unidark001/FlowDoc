@@ -429,7 +429,7 @@ const server = http.createServer((request, response) => {
     if (request.method === "POST") analyzeContract(request, response);
     else sendJson(response, 405, { error: "Method not allowed" }, { Allow: "POST" });
   } else if (pathname === "/api/config") {
-    if (request.method === "GET") sendJson(response, 200, { auth: authConfigured(), billing: billingConfigured(), freeChecks: config.freeChecks });
+    if (request.method === "GET") sendJson(response, 200, { auth: authConfigured(), billing: billingConfigured(), freeChecks: config.freeChecks, supabaseUrl: authConfigured() ? config.supabaseUrl : "", supabaseAnonKey: authConfigured() ? config.supabaseAnonKey : "" });
     else sendJson(response, 405, { error: "Method not allowed" }, { Allow: "GET" });
   } else if (pathname === "/api/me") {
     if (request.method !== "GET") sendJson(response, 405, { error: "Method not allowed" }, { Allow: "GET" });
