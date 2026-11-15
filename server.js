@@ -39,7 +39,7 @@ const config = {
   stripeYearlyPrice: process.env.STRIPE_PRICE_YEARLY || "",
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || "",
   appUrl: process.env.APP_URL || `http://localhost:${process.env.PORT || 8080}`,
-  freeChecks: Math.max(0, Number(process.env.FREE_CHECKS || 3)),
+  freeChecks: Number.isFinite(Number(process.env.FREE_CHECKS || 3)) ? Math.max(0, Number(process.env.FREE_CHECKS || 3)) : 3,
 };
 
 const MAX_BODY_BYTES = 1_500_000;
@@ -154,7 +154,7 @@ const readRawBody = (request) => new Promise((resolve, reject) => {
   request.on("error", reject);
 });
 const authConfigured = () => Boolean(config.supabaseUrl && config.supabaseAnonKey && config.supabaseServiceKey);
-const billingConfigured = () => Boolean(config.stripeSecretKey && config.stripeMonthlyPrice && config.stripeYearlyPrice && config.stripeWebhookSecret);
+const billingConfigured = () => Boolean(authConfigured() && config.stripeSecretKey && config.stripeMonthlyPrice && config.stripeYearlyPrice && config.stripeWebhookSecret);
 const getUser = async (request) => {
   if (!authConfigured()) return null;
   const token = String(request.headers.authorization || "").replace(/^Bearer\s+/i, "").trim();
