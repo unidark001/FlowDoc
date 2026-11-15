@@ -26,3 +26,17 @@ local `.env` file and start with `npm start`; never commit that file.
 
 This preview is educational and is not legal or tax advice. Tax calculations
 are estimates and should be reviewed with a CPA.
+
+## Optional accounts and billing
+
+The default server is anonymous demo mode: no account, database, or payment
+provider is required. To enable account-based free-check limits, run
+[`supabase/schema.sql`](supabase/schema.sql) in a Supabase project and set
+`SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_KEY` in `.env`.
+The service key is server-only and must never be exposed to browser code.
+
+Stripe subscriptions are opt-in. Set the Stripe variables in
+[`.env.example`](.env.example), point the Stripe webhook at
+`/api/stripe-webhook`, and configure the webhook signing secret. Checkout and
+billing endpoints return an explicit configuration error when credentials are
+missing; the local tools continue to work in demo mode.

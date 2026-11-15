@@ -1,6 +1,7 @@
 const http = require("node:http");
 const fs = require("node:fs");
 const path = require("node:path");
+const crypto = require("node:crypto");
 
 const root = __dirname;
 
@@ -30,6 +31,15 @@ const config = {
   model: process.env.OPENAI_MODEL || "gpt-4o-mini",
   baseUrl: (process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/+$/, ""),
   mock: process.env.MOCK_AI === "true",
+  supabaseUrl: (process.env.SUPABASE_URL || "").replace(/\/+$/, ""),
+  supabaseAnonKey: process.env.SUPABASE_ANON_KEY || "",
+  supabaseServiceKey: process.env.SUPABASE_SERVICE_KEY || "",
+  stripeSecretKey: process.env.STRIPE_SECRET_KEY || "",
+  stripeMonthlyPrice: process.env.STRIPE_PRICE_MONTHLY || "",
+  stripeYearlyPrice: process.env.STRIPE_PRICE_YEARLY || "",
+  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || "",
+  appUrl: process.env.APP_URL || `http://localhost:${process.env.PORT || 8080}`,
+  freeChecks: Math.max(0, Number(process.env.FREE_CHECKS || 3)),
 };
 
 const MAX_BODY_BYTES = 1_500_000;
@@ -127,6 +137,50 @@ const parseJsonBody = (request) => new Promise((resolve, reject) => {
   });
   request.on("error", reject);
 });
+
+const readRawBody = (request) => new Promise((resolve, reject) => {
+  const chunks = [];
+  let size = 0;
+  request.on("data", (chunk) => {
+    size += chunk.length;
+    if (size > MAX_BODY_BYTES) {
+      reject(Object.assign(new Error("Request body is too large."), { status: 413 }));
+      request.destroy();
+      return;
+    }
+    chunks.push(chunk);
+  });
+  request.on("end", () => resolve(Buffer.concat(chunks)));
+  request.on("error", reject);
+});
+const authConfigured = () => Boolean(config.supabaseUrl && config.supabaseAnonKey && config.supabaseServiceKey);
+const billingConfigured = () => Boolean(config.stripeSecretKey && config.stripeMonthlyPrice && config.stripeYearlyPrice && config.stripeWebhookSecret);
+const getUser = async (request) => {
+  if (!authConfigured()) return null;
+  const token = String(request.headers.authorization || "").replace(/^Bearer\s+/i, "").trim();
+  if (!token) return null;
+  const result = await fetch(`${config.supabaseUrl}/auth/v1/user`, {
+    headers: { apikey: config.supabaseAnonKey, Authorization: `Bearer ${token}` },
+  });
+  return result.ok ? result.json() : null;
+};
+const supabaseRequest = async (pathName, options = {}) => fetch(`${config.supabaseUrl}${pathName}`, {
+  ...options,
+  headers: { apikey: config.supabaseServiceKey, Authorization: `Bearer ${config.supabaseServiceKey}`, "Content-Type": "application/json", ...(options.headers || {}) },
+});
+const consumeCheck = async (userId) => {
+  const result = await supabaseRequest("/rest/v1/rpc/use_check", { method: "POST", body: JSON.stringify({ uid: userId, free_limit: config.freeChecks }) });
+  return result.ok && (await result.json()) === true;
+};
+const refundCheck = async (userId) => {
+  await supabaseRequest("/rest/v1/rpc/refund_check", { method: "POST", body: JSON.stringify({ uid: userId }) });
+};
+const getProfile = async (userId) => {
+  const result = await supabaseRequest(`/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=plan,checks_used,stripe_customer_id`, { headers: { Prefer: "return=representation" } });
+  const rows = result.ok ? await result.json() : [];
+  const profile = rows[0] || { plan: "free", checks_used: 0 };
+  return { plan: profile.plan, checksUsed: Number(profile.checks_used) || 0, stripeCustomerId: profile.stripe_customer_id || "", remainingChecks: profile.plan === "personal" ? null : Math.max(0, config.freeChecks - (Number(profile.checks_used) || 0)) };
+};
 
 const rateBuckets = new Map();
 const isRateLimited = (request) => {
@@ -244,12 +298,86 @@ const requestUpstreamAnalysis = async (text) => {
   return analysis;
 };
 
+const verifyStripeSignature = (rawBody, signature, secret, now = Math.floor(Date.now() / 1000)) => {
+  const parts = Object.fromEntries(String(signature || "").split(",").map((part) => part.split("=", 2)));
+  const timestamp = Number(parts.t);
+  if (!Number.isFinite(timestamp) || Math.abs(now - timestamp) > 300 || !parts.v1) return false;
+  const expected = crypto.createHmac("sha256", secret).update(`${parts.t}.${rawBody}`).digest("hex");
+  return parts.v1.length === expected.length && crypto.timingSafeEqual(Buffer.from(parts.v1), Buffer.from(expected));
+};
+const stripeRequest = async (endpoint, params) => fetch(`https://api.stripe.com/v1/${endpoint}`, {
+  method: "POST",
+  headers: { Authorization: `Bearer ${config.stripeSecretKey}`, "Content-Type": "application/x-www-form-urlencoded" },
+  body: new URLSearchParams(params),
+});
+const requireConfiguredUser = async (request, response) => {
+  if (!authConfigured()) return { id: "demo-user", email: "demo@flowdoc.local" };
+  const user = await getUser(request);
+  if (!user) sendJson(response, 401, { error: "Sign in to use this feature." });
+  return user;
+};
+const handleCheckout = async (request, response) => {
+  if (!billingConfigured()) {
+    sendJson(response, 503, { error: "Billing is not configured on this server. Demo mode is active." });
+    return;
+  }
+  const user = await requireConfiguredUser(request, response);
+  if (!user) return;
+  try {
+    const body = await parseJsonBody(request);
+    const price = body?.interval === "year" ? config.stripeYearlyPrice : config.stripeMonthlyPrice;
+    const result = await stripeRequest("checkout/sessions", {
+      mode: "subscription",
+      "line_items[0][price]": price,
+      "line_items[0][quantity]": "1",
+      client_reference_id: user.id,
+      customer_email: user.email || "",
+      success_url: `${config.appUrl}/tools.html?paid=1`,
+      cancel_url: `${config.appUrl}/pricing.html`,
+    });
+    const payload = await result.json().catch(() => ({}));
+    sendJson(response, result.ok ? 200 : 502, result.ok ? { url: payload.url } : { error: "Payment service error." });
+  } catch (error) {
+    sendJson(response, error.status || 500, { error: error.message || "Checkout failed." });
+  }
+};
+const handleBillingPortal = async (request, response) => {
+  if (!billingConfigured()) return sendJson(response, 503, { error: "Billing is not configured on this server." });
+  const user = await requireConfiguredUser(request, response);
+  if (!user) return;
+  const profile = await getProfile(user.id);
+  if (!profile.stripeCustomerId) return sendJson(response, 400, { error: "No billing customer is linked to this account." });
+  const result = await stripeRequest("billing_portal/sessions", { customer: profile.stripeCustomerId, return_url: `${config.appUrl}/tools.html` });
+  const payload = await result.json().catch(() => ({}));
+  sendJson(response, result.ok ? 200 : 502, result.ok ? { url: payload.url } : { error: "Billing portal error." });
+};
+const handleStripeWebhook = async (request, response) => {
+  if (!config.stripeWebhookSecret) return sendJson(response, 503, { error: "Stripe webhooks are not configured." });
+  try {
+    const raw = await readRawBody(request);
+    if (!verifyStripeSignature(raw.toString("utf8"), request.headers["stripe-signature"], config.stripeWebhookSecret)) return sendJson(response, 400, { error: "Invalid Stripe signature." });
+    const event = JSON.parse(raw.toString("utf8"));
+    const object = event.data?.object || {};
+    if (event.type === "checkout.session.completed" && object.client_reference_id) {
+      await supabaseRequest(`/rest/v1/profiles?id=eq.${encodeURIComponent(object.client_reference_id)}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ plan: "personal", stripe_customer_id: object.customer }) });
+    } else if (["customer.subscription.deleted", "customer.subscription.updated"].includes(event.type) && object.customer) {
+      const active = ["active", "trialing"].includes(object.status);
+      await supabaseRequest(`/rest/v1/profiles?stripe_customer_id=eq.${encodeURIComponent(object.customer)}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ plan: active ? "personal" : "free" }) });
+    }
+    sendJson(response, 200, { received: true });
+  } catch (error) {
+    sendJson(response, error.status || 400, { error: error.message || "Webhook processing failed." });
+  }
+};
+
 const analyzeContract = async (request, response) => {
   if (isRateLimited(request)) {
     sendJson(response, 429, { error: "Too many reviews in a short time. Please wait a minute." }, { "Retry-After": "60" });
     return;
   }
   try {
+    const user = await requireConfiguredUser(request, response);
+    if (!user) return;
     const body = await parseJsonBody(request);
     const fullText = typeof body?.text === "string" ? body.text.trim() : "";
     if (!fullText) {
@@ -258,6 +386,11 @@ const analyzeContract = async (request, response) => {
     }
     const text = fullText.slice(0, MAX_AI_CHARS);
     const truncated = fullText.length > MAX_AI_CHARS;
+    const charged = authConfigured() ? await consumeCheck(user.id) : false;
+    if (authConfigured() && !charged) {
+      sendJson(response, 402, { error: "Your free checks are used. Choose a paid plan to continue." });
+      return;
+    }
 
     if (config.mock) {
       sendJson(response, 200, { mode: "mock", truncated, analysis: normalizeAnalysis(createMockAnalysis(text)) });
@@ -270,6 +403,10 @@ const analyzeContract = async (request, response) => {
     const analysis = await requestUpstreamAnalysis(text);
     sendJson(response, 200, { mode: "live", truncated, analysis });
   } catch (error) {
+    if (authConfigured() && error.status !== 402) {
+      const tokenUser = await getUser(request).catch(() => null);
+      if (tokenUser) await refundCheck(tokenUser.id).catch(() => {});
+    }
     const timedOut = error.name === "TimeoutError" || error.name === "AbortError";
     if (!error.status && !timedOut) console.error("Analysis failed:", error);
     sendJson(response, timedOut ? 504 : error.status || 500, {
@@ -291,8 +428,27 @@ const server = http.createServer((request, response) => {
   if (pathname === "/api/analyze-contract") {
     if (request.method === "POST") analyzeContract(request, response);
     else sendJson(response, 405, { error: "Method not allowed" }, { Allow: "POST" });
+  } else if (pathname === "/api/config") {
+    if (request.method === "GET") sendJson(response, 200, { auth: authConfigured(), billing: billingConfigured(), freeChecks: config.freeChecks });
+    else sendJson(response, 405, { error: "Method not allowed" }, { Allow: "GET" });
+  } else if (pathname === "/api/me") {
+    if (request.method !== "GET") sendJson(response, 405, { error: "Method not allowed" }, { Allow: "GET" });
+    else getUser(request).then(async (user) => {
+      if (!user) return sendJson(response, authConfigured() ? 401 : 200, authConfigured() ? { error: "Sign in required." } : { demo: true, plan: "free", remainingChecks: null });
+      const profile = await getProfile(user.id);
+      sendJson(response, 200, { user: { id: user.id, email: user.email }, ...profile });
+    }).catch(() => sendJson(response, 502, { error: "Account service unavailable." }));
+  } else if (pathname === "/api/checkout") {
+    if (request.method === "POST") handleCheckout(request, response);
+    else sendJson(response, 405, { error: "Method not allowed" }, { Allow: "POST" });
+  } else if (pathname === "/api/billing-portal") {
+    if (request.method === "POST") handleBillingPortal(request, response);
+    else sendJson(response, 405, { error: "Method not allowed" }, { Allow: "POST" });
+  } else if (pathname === "/api/stripe-webhook") {
+    if (request.method === "POST") handleStripeWebhook(request, response);
+    else sendJson(response, 405, { error: "Method not allowed" }, { Allow: "POST" });
   } else if (pathname === "/api/health") {
-    sendJson(response, 200, { ok: true, ai: config.mock ? "mock" : config.apiKey ? "live" : "unconfigured" });
+    sendJson(response, 200, { ok: true, ai: config.mock ? "mock" : config.apiKey ? "live" : "unconfigured", auth: authConfigured(), billing: billingConfigured() });
   } else if (request.method === "GET" || request.method === "HEAD") {
     serveFile(request, response, pathname);
   } else {
